@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #eef2f6; 
+}
+
+@layer utilities {
+  @media print {
+    /* 1. Paper Setup - Strict A4 */
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    /* 2. Safety Reset - Prevents "Cutting Off" content */
+    html, body {
+      width: 210mm;
+      height: 297mm;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: visible !important; /* CRITICAL FIX */
+      background: white;
+    }
+
+    /* 3. Hide all screen elements */
+    body * {
+      visibility: hidden;
+    }
+
+    /* 4. Show ONLY the receipt */
+    #printable-receipt, #printable-receipt * {
+      visibility: visible;
+    }
+
+    /* 5. Position the receipt perfectly */
+    #printable-receipt {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 210mm;
+      min-height: 297mm;
+      
+      /* Keeps padding inside the A4 width so it doesn't overflow */
+      box-sizing: border-box; 
+      padding: 15mm; /* 1.5cm Safe Margin */
+      
+      background: white;
+      color: black;
+      z-index: 9999;
+      
+      /* Force Colors */
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .no-print {
+      display: none !important;
+    }
+  }
+}

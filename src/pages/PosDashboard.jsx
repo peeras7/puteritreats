@@ -1,0 +1,313 @@
+import React, { useState } from 'react';
+import { ShoppingCart, Plus, Minus, Cookie, X, CheckCircle, User, MapPin, Printer, FileText, Calendar, Truck, DollarSign } from 'lucide-react';
+
+export default function PosDashboard({ inventory, cart, setCart, addToCart, updateQty, cartTotal, onCheckout, sales }) {
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  
+  const [orderDetails, setOrderDetails] = useState({ 
+    name: '', 
+    billTo: '',
+    phone: '',
+    deliveryDate: new Date().toISOString().split('T')[0],
+    deliveryMethod: 'Grab', 
+    deliveryFee: ''
+  });
+  
+  const [invoiceId, setInvoiceId] = useState('');
+
+  const initiateCheckout = () => {
+    if (cart.length === 0) return;
+    
+    // Auto-generate sequential invoice number: pt001, pt002...
+    const nextSaleNumber = sales.length + 1;
+    const formattedId = "INV_PT" + String(nextSaleNumber).padStart(3, '0');
+    
+    setInvoiceId(formattedId);
+    setOrderDetails(prev => ({ ...prev, deliveryFee: '' })); 
+    setIsCheckoutOpen(true);
+  };
+
+  const finalizeOrder = () => {
+    if (onCheckout) {
+       onCheckout({ ...orderDetails, id: invoiceId }); 
+    }
+    setIsCheckoutOpen(false);
+    setTimeout(() => setIsReceiptOpen(true), 50);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const closeAll = () => {
+    setIsReceiptOpen(false);
+    setCart([]);
+    setOrderDetails({ name: '', billTo: '', phone: '', deliveryDate: '', deliveryMethod: 'Grab', deliveryFee: '' });
+  };
+
+  const deliveryFeeAmount = parseFloat(orderDetails.deliveryFee) || 0;
+  const finalTotal = cartTotal + deliveryFeeAmount;
+
+  return (
+    <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6 text-slate-800 relative">
+      
+      {/* --- PRODUCTS GRID --- */}
+      <div className="flex-1 flex flex-col gap-4 md:gap-6 no-print overflow-hidden">
+        <div className="shrink-0">
+          <h2 className="text-2xl md:text-[28px] font-bold tracking-tight">Point of Sale</h2>
+          <p className="text-sm md:text-base text-slate-500 mt-1">Tap items to add to order</p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto pb-4 pr-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+            {inventory.map((item) => (
+              <div key={item.id} onClick={() => addToCart(item)} className="bg-white p-3 md:p-5 rounded-[20px] md:rounded-[24px] shadow-sm hover:shadow-md border border-slate-50 cursor-pointer transition-all active:scale-95 md:hover:-translate-y-1 flex flex-col group">
+                <div className={`w-full aspect-square bg-slate-50 rounded-[16px] flex items-center justify-center mb-3 md:mb-4 ${item.qty === 0 ? 'opacity-50' : 'group-hover:text-[#1a73e8]'}`}>
+                  <Cookie size={32} className="text-slate-300 group-hover:text-blue-400 transition-colors md:w-10 md:h-10" />
+                </div>
+                <h3 className="font-bold text-xs md:text-sm mb-1 line-clamp-1">{item.name}</h3>
+                <p className={`text-[10px] md:text-xs font-medium mb-2 ${item.qty === 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                  {item.qty === 0 ? 'Out of stock' : `${item.qty} in stock`}
+                </p>
+                <div className="mt-auto"><p className="text-[#1a73e8] font-bold text-sm md:text-base">RM {item.price.toFixed(2)}</p></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* --- CART PANEL --- */}
+      <div className="w-full md:w-[380px] h-[35vh] md:h-full bg-white rounded-t-[24px] md:rounded-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:shadow-sm border border-slate-50 flex flex-col overflow-hidden shrink-0 no-print z-20">
+        <div className="p-4 md:p-6 border-b border-slate-50 flex justify-between items-center bg-white sticky top-0">
+          <h3 className="font-bold text-lg md:text-xl tracking-tight">Current Order</h3>
+          <div className="bg-[#1a73e8] text-white w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold shadow-blue-200 shadow-lg text-sm md:text-base">{cart.length}</div>
+        </div>
+        
+        <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
+          {cart.length === 0 ? (
+             <div className="h-full flex flex-col items-center justify-center text-slate-300">
+               <ShoppingCart size={32} className="mb-3 text-slate-200 md:w-12 md:h-12" />
+               <p className="text-sm font-medium">Cart is empty</p>
+             </div>
+          ) : (
+            cart.map(item => (
+              <div key={item.id} className="flex justify-between items-center animation-fade-in">
+                <div className="flex-1 pr-2">
+                  <p className="font-bold text-xs md:text-sm line-clamp-1">{item.name}</p>
+                  <p className="text-[10px] md:text-xs text-slate-400">RM {item.price.toFixed(2)}</p>
+                </div>
+                <div className="flex items-center bg-slate-50 rounded-full p-1 border border-slate-100">
+                  <button onClick={(e) => { e.stopPropagation(); updateQty(item.id, -1); }} className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center hover:bg-white text-slate-500"><Minus size={14} /></button>
+                  <span className="w-6 text-center text-xs md:text-sm font-bold">{item.qty}</span>
+                  <button onClick={(e) => { e.stopPropagation(); updateQty(item.id, 1); }} className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center hover:bg-white text-slate-500"><Plus size={14} /></button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="p-4 md:p-6 bg-slate-50/50 border-t border-slate-100 shrink-0">
+          <div className="flex justify-between items-end mb-4 md:mb-6">
+            <span className="text-slate-500 font-medium text-sm">Total Amount</span>
+            <span className="text-2xl md:text-3xl font-bold text-[#1a73e8]">RM {finalTotal.toFixed(2)}</span>
+          </div>
+          <button onClick={initiateCheckout} disabled={cart.length === 0} className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold text-base md:text-lg transition-all shadow-lg active:scale-95 ${cart.length > 0 ? 'bg-[#1a73e8] hover:bg-blue-700 text-white shadow-blue-500/25' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+            Checkout
+          </button>
+        </div>
+      </div>
+
+      {/* --- CHECKOUT FORM MODAL --- */}
+      {isCheckoutOpen && (
+        <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className="bg-white w-full md:max-w-lg rounded-t-[32px] md:rounded-[32px] shadow-2xl p-6 md:p-8 border border-white/50 animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl md:text-2xl font-bold text-slate-800">Invoice Details</h3>
+              <button onClick={() => setIsCheckoutOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={24} /></button>
+            </div>
+            
+            <div className="space-y-4 mb-8">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Customer Name</label>
+                <div className="flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 focus-within:ring-2 ring-blue-500/20">
+                  <User size={18} className="text-slate-400 mr-3" />
+                  <input type="text" placeholder="e.g. Sarah" className="bg-transparent w-full outline-none text-slate-800 font-bold" autoFocus value={orderDetails.name} onChange={(e) => setOrderDetails({...orderDetails, name: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                <div>
+                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Date</label>
+                   <div className="flex items-center bg-slate-50 rounded-xl px-3 md:px-4 py-3 border border-slate-100 focus-within:ring-2 ring-blue-500/20">
+                     <input type="date" className="bg-transparent w-full outline-none text-slate-800 font-medium text-sm" value={orderDetails.deliveryDate} onChange={(e) => setOrderDetails({...orderDetails, deliveryDate: e.target.value})} />
+                   </div>
+                </div>
+                <div>
+                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Method</label>
+                   <div className="flex items-center bg-slate-50 rounded-xl px-3 md:px-4 py-3 border border-slate-100 focus-within:ring-2 ring-blue-500/20">
+                     <Truck size={18} className="text-slate-400 mr-2 shrink-0" />
+                     <select className="bg-transparent w-full outline-none text-slate-800 font-medium appearance-none text-sm" value={orderDetails.deliveryMethod} onChange={(e) => setOrderDetails({...orderDetails, deliveryMethod: e.target.value})}>
+                       <option value="Grab">Grab</option>
+                       <option value="Lalamove">Lalamove</option>
+                       <option value="PICKUP">Pickup</option>
+                     </select>
+                   </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Delivery Charge (RM)</label>
+                <div className="flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 focus-within:ring-2 ring-blue-500/20">
+                  <DollarSign size={18} className="text-slate-400 mr-3" />
+                  <input type="number" placeholder="0.00" className="bg-transparent w-full outline-none text-slate-800 font-bold" value={orderDetails.deliveryFee} onChange={(e) => setOrderDetails({...orderDetails, deliveryFee: e.target.value})} />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Address / Notes</label>
+                <div className="flex items-start bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 focus-within:ring-2 ring-blue-500/20">
+                  <MapPin size={18} className="text-slate-400 mr-3 mt-1" />
+                  <textarea placeholder="Address, Phone number..." rows="2" className="bg-transparent w-full outline-none text-slate-800 font-medium resize-none" value={orderDetails.billTo} onChange={(e) => setOrderDetails({...orderDetails, billTo: e.target.value})} />
+                </div>
+              </div>
+            </div>
+
+            <button onClick={finalizeOrder} disabled={!orderDetails.name} className={`w-full py-4 rounded-xl md:rounded-2xl font-bold text-lg flex items-center justify-center space-x-2 transition-all shadow-lg active:scale-95 ${orderDetails.name ? 'bg-[#1a73e8] text-white hover:bg-blue-700 shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+              <FileText size={20} /><span>Generate Invoice</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* --- FINAL INVOICE PREVIEW --- */}
+      {isReceiptOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-[393px] md:max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:rounded-xl">
+            
+            {/* Toolbar */}
+            <div className="p-4 bg-slate-800 text-white flex justify-between items-center no-print shrink-0">
+              <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Ready</span>
+              <div className="flex gap-2">
+                 <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 hover:bg-blue-600 transition-colors">
+                    <Printer size={14}/> Print / Save
+                 </button>
+                 <button onClick={closeAll} className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400"><X size={18} /></button>
+              </div>
+            </div>
+
+            {/* --- INVOICE PAPER (Printable Area) --- */}
+            <div id="printable-receipt" className="flex-1 bg-white overflow-y-auto overflow-x-hidden text-slate-800 font-sans relative flex flex-col p-4 md:p-8">
+              
+              {/* Header */}
+              <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
+                    <img src="/logo.png" alt="Pu3's Treats Logo" className="w-full h-full object-contain p-1" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
+                    <p className="text-[10px] md:text-sm font-bold text-[#1a73e8] mt-0.5 md:mt-1">{invoiceId}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <h2 className="text-sm md:text-lg font-bold text-slate-900">Pu3's Treats</h2>
+                  <p className="text-[10px] md:text-xs text-slate-500">Klang Valley, Malaysia</p>
+                  <p className="text-[10px] md:text-xs text-slate-500">012-200 8041</p>
+                </div>
+              </div>
+
+              {/* Info Grid */}
+              <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-10">
+                <div className="flex-1">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h3>
+                  <div className="bg-slate-50/50 p-3 md:p-4 rounded-lg border border-slate-100">
+                    <p className="text-sm md:text-base font-bold text-slate-900 capitalize">{orderDetails.name}</p>
+                    <p className="text-xs md:text-sm text-slate-600 mt-1 whitespace-pre-wrap">{orderDetails.billTo || "No address provided"}</p>
+                  </div>
+                </div>
+                
+                <div className="w-full md:w-1/3 grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-3">
+                  <div className="flex justify-between border-b border-slate-50 pb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
+                    <span className="font-bold text-slate-900 text-xs md:text-sm">{new Date().toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-50 pb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivery</span>
+                    <span className="font-bold text-slate-900 text-xs md:text-sm">{orderDetails.deliveryDate}</span>
+                  </div>
+                  <div className="flex justify-between items-center col-span-2 md:col-span-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Method</span>
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] md:text-xs font-bold text-slate-700 border border-slate-200">
+                      {orderDetails.deliveryMethod}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="mb-6 md:mb-8 flex-1">
+                <table className="w-full text-left border-collapse table-fixed">
+                  <thead>
+                    <tr className="border-b-2 border-slate-800">
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[45%]">Item</th>
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-[15%]">Qty</th>
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Price</th>
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {cart.map((item) => (
+                      <tr key={item.id}>
+                        <td className="py-2 md:py-3 font-bold text-slate-800 text-xs md:text-sm truncate pr-1">{item.name}</td>
+                        <td className="py-2 md:py-3 text-center font-medium text-slate-600 text-xs md:text-sm">{item.qty}</td>
+                        <td className="py-2 md:py-3 text-right text-slate-600 text-xs md:text-sm">RM {item.price.toFixed(2)}</td>
+                        <td className="py-2 md:py-3 text-right font-bold text-slate-900 text-xs md:text-sm">RM {(item.price * item.qty).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer Section */}
+              <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
+                
+                <div className="w-full md:w-auto">
+                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
+                   <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[240px]">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-xs font-bold text-slate-700">Maybank</span>
+                        <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded">MBB</span>
+                      </div>
+                      <p className="text-base md:text-lg font-mono font-bold text-slate-900 tracking-wide">157175142374</p>
+                      <p className="text-[10px] font-medium text-slate-500 uppercase mt-1">Pu3's Treats</p>
+                   </div>
+                </div>
+
+                <div className="w-full md:w-[40%] space-y-2">
+                   <div className="flex justify-between text-xs md:text-sm text-slate-500">
+                     <span className="font-medium">Subtotal</span>
+                     <span>RM {cartTotal.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between text-xs md:text-sm text-slate-800 font-medium border-b border-slate-100 pb-2">
+                     <span>Delivery ({orderDetails.deliveryMethod})</span>
+                     <span>RM {deliveryFeeAmount.toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between items-center pt-1">
+                     <span className="text-sm md:text-base font-bold text-slate-900">Total Due</span>
+                     <span className="text-xl md:text-2xl font-extrabold text-[#1a73e8]">RM {finalTotal.toFixed(2)}</span>
+                   </div>
+                </div>
+              </div>
+
+              <div className="text-center pt-6 pb-2">
+                <p className="text-[10px] md:text-xs font-bold text-slate-900">Thank you for your business!</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
