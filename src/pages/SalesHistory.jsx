@@ -54,7 +54,8 @@ export default function SalesHistory({ sales, loading }) {
   );
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden text-slate-800 p-4 md:p-8 relative">
+    // FIX: Changed from overflow-hidden to overflow-y-auto pb-32
+    <div className="flex flex-col h-full w-full text-slate-800 p-4 md:p-8 overflow-y-auto pb-32 md:pb-8 relative">
       
       {/* Header */}
       <div className="shrink-0 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 no-print">
@@ -84,8 +85,8 @@ export default function SalesHistory({ sales, loading }) {
       </div>
 
       {/* Transactions Table */}
-      <div className="bg-white flex-1 rounded-[24px] border border-slate-100 shadow-sm flex flex-col overflow-hidden min-h-0 no-print">
-        <div className="shrink-0 p-4 md:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm flex flex-col shrink-0 no-print">
+        <div className="p-4 md:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
             <div className="bg-slate-100 p-2 rounded-lg text-slate-500"><FileText size={20} /></div>
             <h3 className="text-lg md:text-xl font-bold">Recent Transactions</h3>
@@ -96,14 +97,15 @@ export default function SalesHistory({ sales, loading }) {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
+        {/* FIX: Ensure table can be scrolled horizontally on small phones */}
+        <div className="overflow-x-auto w-full">
           {loading ? (
-            <div className="h-full flex items-center justify-center text-slate-400">Loading sales data...</div>
+            <div className="py-20 flex items-center justify-center text-slate-400">Loading sales data...</div>
           ) : filteredSales.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400"><ShoppingBag size={48} className="mb-4 text-slate-200" /><p>No transactions found.</p></div>
+            <div className="py-20 flex flex-col items-center justify-center text-slate-400"><ShoppingBag size={48} className="mb-4 text-slate-200" /><p>No transactions found.</p></div>
           ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-white sticky top-0 z-10 shadow-sm">
+            <table className="w-full text-left border-collapse min-w-[500px]">
+              <thead className="bg-white border-b border-slate-50">
                 <tr>
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</th>
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">ID / Customer</th>
@@ -176,8 +178,8 @@ export default function SalesHistory({ sales, loading }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
-                  <p className="text-[10px] md:text-xs text-slate-500">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
+                  <h2 className="text-sm md:text-lg font-bold text-slate-900">Pu3's Treats</h2>
+                  <p className="text-[10px] md:text-xs text-slate-500">Klang Valley, Malaysia</p>
                   <p className="text-[10px] md:text-xs text-slate-500">012-200 8041</p>
                 </div>
               </div>

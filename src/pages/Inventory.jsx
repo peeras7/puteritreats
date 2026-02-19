@@ -58,13 +58,14 @@ export default function Inventory({ inventory }) {
   };
 
   return (
-    <div className="flex flex-col h-full w-full text-slate-800 p-4 md:p-8 overflow-hidden">
+    // FIX: Changed from overflow-hidden to overflow-y-auto pb-32
+    <div className="flex flex-col h-full w-full text-slate-800 p-4 md:p-8 overflow-y-auto pb-32 md:pb-8">
       
       {/* Header Section */}
       <div className="shrink-0 mb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-2xl md:text-[28px] font-bold tracking-tight">Inventory Management</h2>
-          <p className="text-sm md:text-base text-slate-500 mt-1">Manage products and stock levels efficiently</p>
+          <p className="text-sm md:text-base text-slate-500 mt-1">Manage products and stock levels</p>
         </div>
         <button 
           onClick={() => openModal()}
@@ -111,10 +112,10 @@ export default function Inventory({ inventory }) {
       </div>
 
       {/* Main Table Container */}
-      <div className="flex-1 bg-white rounded-[24px] border border-slate-100 shadow-sm flex flex-col overflow-hidden min-h-0">
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm flex flex-col shrink-0">
         
         {/* Toolbar */}
-        <div className="shrink-0 p-4 md:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-4 md:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
              <div className="bg-slate-100 p-2 rounded-lg text-slate-500"><Package size={20} /></div>
              <h3 className="text-lg font-bold">All Products</h3>
@@ -131,10 +132,10 @@ export default function Inventory({ inventory }) {
           </div>
         </div>
 
-        {/* Scrollable Table Area */}
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-white sticky top-0 z-10 shadow-sm">
+        {/* FIX: Let the table scroll horizontally if it gets too wide on mobile */}
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse min-w-[400px]">
+            <thead className="bg-white border-b border-slate-50">
               <tr>
                 <th className="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Name</th>
                 <th className="py-4 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stock</th>
@@ -146,9 +147,7 @@ export default function Inventory({ inventory }) {
             <tbody className="divide-y divide-slate-50">
               {filteredInventory.map((item) => (
                 <tr key={item.id} className="group hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 px-6 font-bold text-sm text-slate-700">
-                    {item.name}
-                  </td>
+                  <td className="py-4 px-6 font-bold text-sm text-slate-700">{item.name}</td>
                   <td className="py-4 px-6 text-sm">
                     <span className={`px-2 py-1 rounded-md text-xs font-bold ${item.qty <= 5 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'}`}>
                       {item.qty}
@@ -164,7 +163,6 @@ export default function Inventory({ inventory }) {
                   </td>
                 </tr>
               ))}
-              <tr className="h-16 md:h-0"></tr>
             </tbody>
           </table>
         </div>

@@ -143,24 +143,20 @@ export default function App() {
             {activeTab === 'inventory' && <Inventory inventory={inventory} />}
             
             {activeTab === 'dashboard' && (
-              <div className="h-full w-full overflow-auto p-4 md:p-8">
-                <PosDashboard 
-                  inventory={inventory} 
-                  cart={cart} 
-                  setCart={setCart} 
-                  addToCart={addToCart} 
-                  updateQty={updateQty} 
-                  cartTotal={cartTotal}
-                  onCheckout={(data) => handleCheckout(data)}
-                  sales={sales}
-                />
-              </div>
+              <PosDashboard 
+                inventory={inventory} 
+                cart={cart} 
+                setCart={setCart} 
+                addToCart={addToCart} 
+                updateQty={updateQty} 
+                cartTotal={cartTotal}
+                onCheckout={(data) => handleCheckout(data)}
+                sales={sales}
+              />
             )}
 
             {activeTab === 'sales' && (
-              <div className="h-full w-full overflow-auto p-4 md:p-8">
-                <SalesHistory sales={sales} loading={salesLoading} /> 
-              </div>
+              <SalesHistory sales={sales} loading={salesLoading} /> 
             )}
           </div>
           
