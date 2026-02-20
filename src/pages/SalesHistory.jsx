@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 export default function SalesHistory({ sales, loading }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -8,14 +9,12 @@ export default function SalesHistory({ sales, loading }) {
   const [selectedSale, setSelectedSale] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
-  // --- 1. CALCULATE STATS ---
   const totalRevenue = sales.reduce((sum, order) => sum + (order.total || 0), 0);
   const totalOrders = sales.length;
   const grossProfit = sales.reduce((sum, order) => {
     return sum + (order.items?.reduce((isum, item) => isum + ((item.commission || 0) * (item.qty || 0)), 0) || 0);
   }, 0);
 
-  // --- 2. EXPORT CSV ---
   const downloadCSV = () => {
     const headers = ["Date", "Order ID", "Customer", "Items", "Method", "Revenue (RM)", "Commission (RM)"];
     const rows = sales.map(sale => {
@@ -37,21 +36,33 @@ export default function SalesHistory({ sales, loading }) {
     link.click();
   };
 
-  // --- 3. HANDLE PRINT INVOICE ---
   const openInvoice = (sale) => {
     setSelectedSale(sale);
-    // Added a slight delay to ensure modal transition finishes before showing receipt
     setTimeout(() => setIsInvoiceOpen(true), 100);
   };
 
   const handlePrint = () => {
-    // FIX FOR MOBILE: A slight delay ensures the mobile browser renders the modal fully before triggering print
-    setTimeout(() => {
-        window.print();
-    }, 100);
+    setTimeout(() => { window.print(); }, 100);
   };
 
-  // Filter
+  // --- NEW: DOWNLOAD PNG FUNCTION ---
+  const handleDownloadPNG = async () => {
+    const receiptElement = document.getElementById('printable-receipt');
+    if (!receiptElement) return;
+
+    try {
+      const canvas = await html2canvas(receiptElement, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = imgData;
+      link.download = `Invoice_${selectedSale.id}.png`;
+      link.click();
+    } catch (error) {
+      console.error("Error generating PNG:", error);
+      alert("Failed to save image.");
+    }
+  };
+
   const filteredSales = sales.filter(order => 
     (order.name && order.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (order.id && order.id.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -157,9 +168,14 @@ export default function SalesHistory({ sales, loading }) {
             {/* Toolbar */}
             <div className="p-4 bg-slate-800 text-white flex justify-between items-center no-print shrink-0">
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Invoice View</span>
+              
+              {/* NEW TOOLBAR BUTTONS */}
               <div className="flex gap-2">
-                 <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 hover:bg-blue-600 transition-colors">
-                    <Printer size={14}/> Print / Save
+                 <button onClick={handleDownloadPNG} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
+                    <Download size={14}/> <span className="hidden md:inline">Save PNG</span><span className="md:hidden">PNG</span>
+                 </button>
+                 <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
+                    <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>
                  </button>
                  <button onClick={() => setIsInvoiceOpen(false)} className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400"><X size={18} /></button>
               </div>
@@ -181,7 +197,7 @@ export default function SalesHistory({ sales, loading }) {
                 </div>
                 <div className="text-right">
                   <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
-                  <p className="text-[10px] md:text-xs text-slate-500">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
+                  <p className="text-[10px] md:text-xs text-slate-500">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor, Malaysia</p>
                   <p className="text-[10px] md:text-xs text-slate-500">012-200 8041</p>
                 </div>
               </div>
@@ -251,7 +267,6 @@ export default function SalesHistory({ sales, loading }) {
                         <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
                         <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Pu3's Treats</p>
                       </div>
-                      {/* QR Code Image */}
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
                          <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
                       </div>

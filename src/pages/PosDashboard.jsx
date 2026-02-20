@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Plus, Minus, Cookie, X, CheckCircle, User, MapPin, Printer, FileText, Truck, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Cookie, X, CheckCircle, User, MapPin, Printer, FileText, Truck, DollarSign, Download } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 export default function PosDashboard({ inventory, cart, setCart, addToCart, updateQty, cartTotal, onCheckout, sales }) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -18,11 +19,8 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
 
   const initiateCheckout = () => {
     if (cart.length === 0) return;
-    
-    // Auto-generate sequential invoice number: pt001, pt002...
     const nextSaleNumber = sales.length + 1;
     const formattedId = "pt" + String(nextSaleNumber).padStart(3, '0');
-    
     setInvoiceId(formattedId);
     setOrderDetails(prev => ({ ...prev, deliveryFee: '' })); 
     setIsCheckoutOpen(true);
@@ -33,15 +31,30 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
        onCheckout({ ...orderDetails, id: invoiceId }); 
     }
     setIsCheckoutOpen(false);
-    // Added a slight delay to ensure modal transition finishes before showing receipt
     setTimeout(() => setIsReceiptOpen(true), 100);
   };
 
   const handlePrint = () => {
-    // FIX FOR MOBILE: A slight delay ensures the mobile browser renders the modal fully before triggering print
-    setTimeout(() => {
-        window.print();
-    }, 100);
+    setTimeout(() => { window.print(); }, 100);
+  };
+
+  // --- NEW: DOWNLOAD PNG FUNCTION ---
+  const handleDownloadPNG = async () => {
+    const receiptElement = document.getElementById('printable-receipt');
+    if (!receiptElement) return;
+
+    try {
+      // scale: 2 makes the image high resolution and crisp
+      const canvas = await html2canvas(receiptElement, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = imgData;
+      link.download = `Invoice_${invoiceId}.png`;
+      link.click();
+    } catch (error) {
+      console.error("Error generating PNG:", error);
+      alert("Failed to save image.");
+    }
   };
 
   const closeAll = () => {
@@ -66,7 +79,7 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
         <div className="flex-1 overflow-y-auto pb-4 pr-1">
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
             {inventory.map((item) => (
-              <div key={item.id} onClick={() => addToCart(item)} className="bg-white p-3 md:p-5 rounded-[20px] md:rounded-[24px] shadow-sm hover:shadow-md border border-slate-50 cursor-pointer transition-all active:scale-95 md:hover:-translate-y-1 flex flex-col group">
+              <div key={item.id} onClick={() => addToCart(item)} className="bg-white p-3 md:p-5 rounded-[20px] md:rounded-[24px] shadow-sm hover:shadow-md border border-slate-50 cursor-pointer transition-all active:scale-95 flex flex-col group">
                 <div className={`w-full aspect-square bg-slate-50 rounded-[16px] flex items-center justify-center mb-3 md:mb-4 ${item.qty === 0 ? 'opacity-50' : 'group-hover:text-[#1a73e8]'}`}>
                   <Cookie size={32} className="text-slate-300 group-hover:text-blue-400 transition-colors md:w-10 md:h-10" />
                 </div>
@@ -116,7 +129,7 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
             <span className="text-slate-500 font-medium text-sm">Total Amount</span>
             <span className="text-2xl md:text-3xl font-bold text-[#1a73e8]">RM {finalTotal.toFixed(2)}</span>
           </div>
-          <button onClick={initiateCheckout} disabled={cart.length === 0} className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold text-base md:text-lg transition-all shadow-lg active:scale-95 ${cart.length > 0 ? 'bg-[#1a73e8] hover:bg-blue-700 text-white shadow-blue-500/25' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+          <button onClick={initiateCheckout} disabled={cart.length === 0} className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold text-base md:text-lg transition-all shadow-lg active:scale-95 ${cart.length > 0 ? 'bg-[#1a73e8] text-white shadow-blue-500/25' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
             Checkout
           </button>
         </div>
@@ -178,7 +191,7 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
               </div>
             </div>
 
-            <button onClick={finalizeOrder} disabled={!orderDetails.name} className={`w-full py-4 rounded-xl md:rounded-2xl font-bold text-lg flex items-center justify-center space-x-2 transition-all shadow-lg active:scale-95 ${orderDetails.name ? 'bg-[#1a73e8] text-white hover:bg-blue-700 shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+            <button onClick={finalizeOrder} disabled={!orderDetails.name} className={`w-full py-4 rounded-xl md:rounded-2xl font-bold text-lg flex items-center justify-center space-x-2 transition-all shadow-lg active:scale-95 ${orderDetails.name ? 'bg-[#1a73e8] text-white shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
               <FileText size={20} /><span>Generate Invoice</span>
             </button>
           </div>
@@ -193,9 +206,14 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
             {/* Toolbar */}
             <div className="p-4 bg-slate-800 text-white flex justify-between items-center no-print shrink-0">
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Ready</span>
+              
+              {/* NEW TOOLBAR BUTTONS */}
               <div className="flex gap-2">
-                 <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-2 hover:bg-blue-600 transition-colors">
-                    <Printer size={14}/> Print / Save
+                 <button onClick={handleDownloadPNG} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
+                    <Download size={14}/> <span className="hidden md:inline">Save PNG</span><span className="md:hidden">PNG</span>
+                 </button>
+                 <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
+                    <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>
                  </button>
                  <button onClick={closeAll} className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-400"><X size={18} /></button>
               </div>
@@ -277,7 +295,6 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
               {/* Footer Section with QR Code */}
               <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
                 
-                {/* Bank Details & QR Code */}
                 <div className="w-full md:w-auto">
                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
                    <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[280px] flex justify-between items-center gap-4">
@@ -289,14 +306,12 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
                         <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
                         <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Pu3's Treats</p>
                       </div>
-                      {/* QR Code Image */}
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
                          <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
                       </div>
                    </div>
                 </div>
 
-                {/* Total Calculation */}
                 <div className="w-full md:w-[40%] space-y-2">
                    <div className="flex justify-between text-xs md:text-sm text-slate-500">
                      <span className="font-medium">Subtotal</span>
