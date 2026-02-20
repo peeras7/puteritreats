@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Plus, Minus, Cookie, X, CheckCircle, User, MapPin, Printer, FileText, Calendar, Truck, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Cookie, X, CheckCircle, User, MapPin, Printer, FileText, Truck, DollarSign } from 'lucide-react';
 
 export default function PosDashboard({ inventory, cart, setCart, addToCart, updateQty, cartTotal, onCheckout, sales }) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -21,7 +21,7 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
     
     // Auto-generate sequential invoice number: pt001, pt002...
     const nextSaleNumber = sales.length + 1;
-    const formattedId = "INV_PT" + String(nextSaleNumber).padStart(3, '0');
+    const formattedId = "pt" + String(nextSaleNumber).padStart(3, '0');
     
     setInvoiceId(formattedId);
     setOrderDetails(prev => ({ ...prev, deliveryFee: '' })); 
@@ -33,11 +33,15 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
        onCheckout({ ...orderDetails, id: invoiceId }); 
     }
     setIsCheckoutOpen(false);
-    setTimeout(() => setIsReceiptOpen(true), 50);
+    // Added a slight delay to ensure modal transition finishes before showing receipt
+    setTimeout(() => setIsReceiptOpen(true), 100);
   };
 
   const handlePrint = () => {
-    window.print();
+    // FIX FOR MOBILE: A slight delay ensures the mobile browser renders the modal fully before triggering print
+    setTimeout(() => {
+        window.print();
+    }, 100);
   };
 
   const closeAll = () => {
@@ -150,6 +154,7 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
                      <select className="bg-transparent w-full outline-none text-slate-800 font-medium appearance-none text-sm" value={orderDetails.deliveryMethod} onChange={(e) => setOrderDetails({...orderDetails, deliveryMethod: e.target.value})}>
                        <option value="Grab">Grab</option>
                        <option value="Lalamove">Lalamove</option>
+                       <option value="COD">COD</option>
                        <option value="PICKUP">Pickup</option>
                      </select>
                    </div>
@@ -269,21 +274,29 @@ export default function PosDashboard({ inventory, cart, setCart, addToCart, upda
                 </table>
               </div>
 
-              {/* Footer Section */}
+              {/* Footer Section with QR Code */}
               <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
                 
+                {/* Bank Details & QR Code */}
                 <div className="w-full md:w-auto">
                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
-                   <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[240px]">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-bold text-slate-700">Maybank</span>
-                        <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded">MBB</span>
+                   <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[280px] flex justify-between items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1 gap-2">
+                            <span className="text-xs font-bold text-slate-700 truncate">Maybank</span>
+                            <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
+                        </div>
+                        <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
+                        <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Pu3's Treats</p>
                       </div>
-                      <p className="text-base md:text-lg font-mono font-bold text-slate-900 tracking-wide">157175142374</p>
-                      <p className="text-[10px] font-medium text-slate-500 uppercase mt-1">Pu3's Treats</p>
+                      {/* QR Code Image */}
+                      <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
+                         <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
+                      </div>
                    </div>
                 </div>
 
+                {/* Total Calculation */}
                 <div className="w-full md:w-[40%] space-y-2">
                    <div className="flex justify-between text-xs md:text-sm text-slate-500">
                      <span className="font-medium">Subtotal</span>

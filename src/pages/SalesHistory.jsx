@@ -40,11 +40,15 @@ export default function SalesHistory({ sales, loading }) {
   // --- 3. HANDLE PRINT INVOICE ---
   const openInvoice = (sale) => {
     setSelectedSale(sale);
-    setIsInvoiceOpen(true);
+    // Added a slight delay to ensure modal transition finishes before showing receipt
+    setTimeout(() => setIsInvoiceOpen(true), 100);
   };
 
   const handlePrint = () => {
-    window.print();
+    // FIX FOR MOBILE: A slight delay ensures the mobile browser renders the modal fully before triggering print
+    setTimeout(() => {
+        window.print();
+    }, 100);
   };
 
   // Filter
@@ -54,7 +58,6 @@ export default function SalesHistory({ sales, loading }) {
   );
 
   return (
-    // FIX: Changed from overflow-hidden to overflow-y-auto pb-32
     <div className="flex flex-col h-full w-full text-slate-800 p-4 md:p-8 overflow-y-auto pb-32 md:pb-8 relative">
       
       {/* Header */}
@@ -97,7 +100,6 @@ export default function SalesHistory({ sales, loading }) {
           </div>
         </div>
 
-        {/* FIX: Ensure table can be scrolled horizontally on small phones */}
         <div className="overflow-x-auto w-full">
           {loading ? (
             <div className="py-20 flex items-center justify-center text-slate-400">Loading sales data...</div>
@@ -178,8 +180,8 @@ export default function SalesHistory({ sales, loading }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  <h2 className="text-sm md:text-lg font-bold text-slate-900">Pu3's Treats</h2>
-                  <p className="text-[10px] md:text-xs text-slate-500">Klang Valley, Malaysia</p>
+                  <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
+                  <p className="text-[10px] md:text-xs text-slate-500">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
                   <p className="text-[10px] md:text-xs text-slate-500">012-200 8041</p>
                 </div>
               </div>
@@ -236,17 +238,23 @@ export default function SalesHistory({ sales, loading }) {
                 </table>
               </div>
 
-              {/* Footer Section */}
+              {/* Footer Section with QR Code */}
               <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
                 <div className="w-full md:w-auto">
                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
-                   <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[240px]">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs font-bold text-slate-700">Maybank</span>
-                        <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded">MBB</span>
+                   <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[280px] flex justify-between items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1 gap-2">
+                            <span className="text-xs font-bold text-slate-700 truncate">Maybank</span>
+                            <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
+                        </div>
+                        <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
+                        <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Pu3's Treats</p>
                       </div>
-                      <p className="text-base md:text-lg font-mono font-bold text-slate-900 tracking-wide">157175142374</p>
-                      <p className="text-[10px] font-medium text-slate-500 uppercase mt-1">Pu3's Treats</p>
+                      {/* QR Code Image */}
+                      <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
+                         <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
+                      </div>
                    </div>
                 </div>
 
