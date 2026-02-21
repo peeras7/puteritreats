@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2, Share2 } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2, Image as ImageIcon, ArrowLeft } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from '../firebase'; 
@@ -9,6 +9,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
   
   const [selectedSale, setSelectedSale] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState(null); // NEW: Holds the picture
 
   const totalRevenue = sales.reduce((sum, order) => sum + (order.total || 0), 0);
   const totalOrders = sales.length;
@@ -39,6 +40,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
 
   const openInvoice = (sale) => {
     setSelectedSale(sale);
+    setGeneratedImage(null);
     setTimeout(() => setIsInvoiceOpen(true), 100);
   };
 
@@ -46,8 +48,8 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
     setTimeout(() => { window.print(); }, 100);
   };
 
-  // --- NATIVE SHARE FUNCTION ---
-  const handleShare = async () => {
+  // --- NEW: GENERATE IMAGE FOR LONG-PRESS ---
+  const handleGenerateImage = async () => {
     const receiptElement = document.getElementById('receipt-capture-area');
     if (!receiptElement) return;
 
@@ -57,34 +59,11 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
         backgroundColor: '#ffffff',
         useCORS: true 
       });
-
-      canvas.toBlob(async (blob) => {
-        if (!blob) throw new Error("Image generation failed");
-        
-        const file = new File([blob], `Invoice_${selectedSale.id}.png`, { type: 'image/png' });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: `Invoice ${selectedSale.id}`
-            });
-          } catch (err) {
-            console.log("Share menu closed or failed.");
-          }
-        } else {
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `Invoice_${selectedSale.id}.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-      }, 'image/png');
-
+      const dataUrl = canvas.toDataURL('image/png');
+      setGeneratedImage(dataUrl);
     } catch (error) {
       console.error("Error generating PNG:", error);
-      alert("Failed to share image. Please try taking a screenshot.");
+      alert("Failed to generate image.");
     }
   };
 
@@ -213,9 +192,15 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Invoice View</span>
               
               <div className="flex gap-2">
-                 <button onClick={handleShare} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
-                    <Share2 size={14}/> <span>Share</span>
-                 </button>
+                 {generatedImage ? (
+                   <button onClick={() => setGeneratedImage(null)} className="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-slate-500 transition-colors">
+                      <ArrowLeft size={14}/> <span>Back</span>
+                   </button>
+                 ) : (
+                   <button onClick={handleGenerateImage} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
+                      <ImageIcon size={14}/> <span className="hidden md:inline">Get Image</span><span className="md:hidden">Image</span>
+                   </button>
+                 )}
                  <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
                     <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>
                  </button>
@@ -223,117 +208,122 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
               </div>
             </div>
 
-            {/* SEPARATED SCROLL CONTAINER */}
-            <div className="flex-1 bg-white overflow-y-auto overflow-x-hidden text-slate-800 font-sans relative">
-              
-              {/* TARGET CONTAINER FOR SNAPSHOT (No scrollbar limits here) */}
-              <div id="receipt-capture-area" className="flex flex-col p-4 md:p-8 bg-white min-h-max">
-                
-                <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
-                      <img src="/logo.png" alt="Puteri Treats Logo" className="w-full h-full object-contain p-1" />
-                    </div>
-                    <div>
-                      <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
-                      <p className="text-[10px] md:text-sm font-bold text-[#1a73e8] mt-0.5 md:mt-1">{selectedSale.id}</p>
-                    </div>
+            <div className="flex-1 overflow-y-auto bg-slate-100">
+              {generatedImage ? (
+                <div className="p-4 md:p-8 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+                  <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 text-xs md:text-sm font-bold p-3 rounded-lg w-full mb-4 text-center shadow-sm">
+                    📱 Long-press the receipt below to Save to Photos or Share to WhatsApp!
                   </div>
-                  <div className="text-right">
-                    <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
-                    <p className="text-[10px] md:text-xs text-slate-500 max-w-[160px] ml-auto">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
-                  </div>
+                  <img src={generatedImage} alt="Receipt" className="max-w-full shadow-2xl rounded-xl border border-slate-200" />
                 </div>
-
-                <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-10">
-                  <div className="flex-1">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h3>
-                    <div className="bg-slate-50/50 p-3 md:p-4 rounded-lg border border-slate-100">
-                      <p className="text-sm md:text-base font-bold text-slate-900 capitalize">{selectedSale.name}</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1 whitespace-pre-wrap">{selectedSale.billTo || "No address provided"}</p>
-                    </div>
-                  </div>
+              ) : (
+                <div id="receipt-capture-area" className="flex flex-col p-4 md:p-8 bg-white min-h-max text-slate-800 font-sans">
                   
-                  <div className="w-full md:w-1/3 grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-3">
-                    <div className="flex justify-between border-b border-slate-50 pb-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
-                      <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.date.toLocaleDateString()}</span>
+                  <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
+                        <img src="/logo.png" alt="Puteri Treats Logo" className="w-full h-full object-contain p-1" />
+                      </div>
+                      <div>
+                        <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
+                        <p className="text-[10px] md:text-sm font-bold text-[#1a73e8] mt-0.5 md:mt-1">{selectedSale.id}</p>
+                      </div>
                     </div>
-                    <div className="flex justify-between border-b border-slate-50 pb-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivery</span>
-                      <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.deliveryDate}</span>
-                    </div>
-                    <div className="flex justify-between items-center col-span-2 md:col-span-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Method</span>
-                      <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] md:text-xs font-bold text-slate-700 border border-slate-200">
-                        {selectedSale.deliveryMethod}
-                      </span>
+                    <div className="text-right">
+                      <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
+                      <p className="text-[10px] md:text-xs text-slate-500 max-w-[160px] ml-auto">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
                     </div>
                   </div>
-                </div>
 
-                <div className="mb-6 md:mb-8 flex-1">
-                  <table className="w-full text-left border-collapse table-fixed">
-                    <thead>
-                      <tr className="border-b-2 border-slate-800">
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[45%]">Item</th>
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-[15%]">Qty</th>
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Price</th>
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {selectedSale.items?.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="py-2 md:py-3 font-bold text-slate-800 text-xs md:text-sm truncate pr-1">{item.name}</td>
-                          <td className="py-2 md:py-3 text-center font-medium text-slate-600 text-xs md:text-sm">{item.qty}</td>
-                          <td className="py-2 md:py-3 text-right text-slate-600 text-xs md:text-sm">RM {item.price.toFixed(2)}</td>
-                          <td className="py-2 md:py-3 text-right font-bold text-slate-900 text-xs md:text-sm">RM {(item.price * item.qty).toFixed(2)}</td>
+                  <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-10">
+                    <div className="flex-1">
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h3>
+                      <div className="bg-slate-50/50 p-3 md:p-4 rounded-lg border border-slate-100">
+                        <p className="text-sm md:text-base font-bold text-slate-900 capitalize">{selectedSale.name}</p>
+                        <p className="text-xs md:text-sm text-slate-600 mt-1 whitespace-pre-wrap">{selectedSale.billTo || "No address provided"}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="w-full md:w-1/3 grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-3">
+                      <div className="flex justify-between border-b border-slate-50 pb-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
+                        <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.date.toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-50 pb-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivery</span>
+                        <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.deliveryDate}</span>
+                      </div>
+                      <div className="flex justify-between items-center col-span-2 md:col-span-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Method</span>
+                        <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] md:text-xs font-bold text-slate-700 border border-slate-200">
+                          {selectedSale.deliveryMethod}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 md:mb-8 flex-1">
+                    <table className="w-full text-left border-collapse table-fixed">
+                      <thead>
+                        <tr className="border-b-2 border-slate-800">
+                          <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[45%]">Item</th>
+                          <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-[15%]">Qty</th>
+                          <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Price</th>
+                          <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {selectedSale.items?.map((item, idx) => (
+                          <tr key={idx}>
+                            <td className="py-2 md:py-3 font-bold text-slate-800 text-xs md:text-sm truncate pr-1">{item.name}</td>
+                            <td className="py-2 md:py-3 text-center font-medium text-slate-600 text-xs md:text-sm">{item.qty}</td>
+                            <td className="py-2 md:py-3 text-right text-slate-600 text-xs md:text-sm">RM {item.price.toFixed(2)}</td>
+                            <td className="py-2 md:py-3 text-right font-bold text-slate-900 text-xs md:text-sm">RM {(item.price * item.qty).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
-                  <div className="w-full md:w-auto">
-                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
-                     <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[280px] flex justify-between items-center gap-4">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1 gap-2">
-                              <span className="text-xs font-bold text-slate-700 truncate">Maybank</span>
-                              <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
+                  <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
+                    <div className="w-full md:w-auto">
+                       <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
+                       <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[280px] flex justify-between items-center gap-4">
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1 gap-2">
+                                <span className="text-xs font-bold text-slate-700 truncate">Maybank</span>
+                                <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
+                            </div>
+                            <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
+                            <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
                           </div>
-                          <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
-                          <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
-                        </div>
-                        <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
-                           <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
-                        </div>
-                     </div>
+                          <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
+                             <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="w-full md:w-[40%] space-y-2">
+                       <div className="flex justify-between text-xs md:text-sm text-slate-500">
+                         <span className="font-medium">Subtotal</span>
+                         <span>RM {(selectedSale.total - (parseFloat(selectedSale.deliveryFee) || 0)).toFixed(2)}</span>
+                       </div>
+                       <div className="flex justify-between text-xs md:text-sm text-slate-800 font-medium border-b border-slate-100 pb-2">
+                         <span>Delivery ({selectedSale.deliveryMethod})</span>
+                         <span>RM {(parseFloat(selectedSale.deliveryFee) || 0).toFixed(2)}</span>
+                       </div>
+                       <div className="flex justify-between items-center pt-1">
+                         <span className="text-sm md:text-base font-bold text-slate-900">Total Due</span>
+                         <span className="text-2xl md:text-3xl font-extrabold text-[#1a73e8]">RM {selectedSale.total.toFixed(2)}</span>
+                       </div>
+                    </div>
                   </div>
 
-                  <div className="w-full md:w-[40%] space-y-2">
-                     <div className="flex justify-between text-xs md:text-sm text-slate-500">
-                       <span className="font-medium">Subtotal</span>
-                       <span>RM {(selectedSale.total - (parseFloat(selectedSale.deliveryFee) || 0)).toFixed(2)}</span>
-                     </div>
-                     <div className="flex justify-between text-xs md:text-sm text-slate-800 font-medium border-b border-slate-100 pb-2">
-                       <span>Delivery ({selectedSale.deliveryMethod})</span>
-                       <span>RM {(parseFloat(selectedSale.deliveryFee) || 0).toFixed(2)}</span>
-                     </div>
-                     <div className="flex justify-between items-center pt-1">
-                       <span className="text-sm md:text-base font-bold text-slate-900">Total Due</span>
-                       <span className="text-2xl md:text-3xl font-extrabold text-[#1a73e8]">RM {selectedSale.total.toFixed(2)}</span>
-                     </div>
+                  <div className="text-center pt-6 pb-2">
+                    <p className="text-[10px] md:text-xs font-bold text-slate-900">Thank you for your business!</p>
                   </div>
                 </div>
-
-                <div className="text-center pt-6 pb-2">
-                  <p className="text-[10px] md:text-xs font-bold text-slate-900">Thank you for your business!</p>
-                </div>
-              </div>
-              
+              )}
             </div>
           </div>
         </div>
