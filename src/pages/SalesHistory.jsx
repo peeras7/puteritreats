@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2, Share2 } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from '../firebase'; 
@@ -46,42 +46,19 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
     setTimeout(() => { window.print(); }, 100);
   };
 
-  // --- THE ULTIMATE iOS/ANDROID SHARE FIX ---
-  const handleShareImage = async () => {
-    const receiptElement = document.getElementById('receipt-capture-area');
+  const handleDownloadPNG = async () => {
+    const receiptElement = document.getElementById('printable-receipt');
     if (!receiptElement) return;
-
     try {
-      const canvas = await html2canvas(receiptElement, { 
-        scale: 2, 
-        backgroundColor: '#ffffff',
-        useCORS: true 
-      });
-
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `Invoice_${selectedSale.id}.jpg`, { type: 'image/jpeg' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: `Invoice ${selectedSale.id}`,
-          });
-        } catch (err) {
-          console.log("User closed share menu.");
-        }
-      } else {
-        const link = document.createElement('a');
-        link.href = dataUrl;
-        link.download = `Invoice_${selectedSale.id}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+      const canvas = await html2canvas(receiptElement, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = imgData;
+      link.download = `Invoice_${selectedSale.id}.png`;
+      link.click();
     } catch (error) {
-      console.error("Image generation error:", error);
-      alert("Oops! Your phone blocked the generation. Please take a screenshot!");
+      console.error("Error generating PNG:", error);
+      alert("Failed to save image.");
     }
   };
 
@@ -201,7 +178,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
         </div>
       </div>
 
-      {/* --- INVOICE MODAL --- */}
+      {/* --- INVOICE MODAL (REVERTED TO PRINTABLE STRUCTURE) --- */}
       {isInvoiceOpen && selectedSale && (
         <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-[393px] md:max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:rounded-xl">
@@ -210,8 +187,8 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Invoice View</span>
               
               <div className="flex gap-2">
-                 <button onClick={handleShareImage} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
-                    <Share2 size={14}/> <span>Share Image</span>
+                 <button onClick={handleDownloadPNG} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
+                    <Download size={14}/> <span className="hidden md:inline">Save PNG</span><span className="md:hidden">PNG</span>
                  </button>
                  <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
                     <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>
@@ -220,115 +197,113 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-slate-100">
-              <div id="receipt-capture-area" className="flex flex-col p-4 md:p-8 bg-white min-h-max text-slate-800 font-sans">
-                
-                <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
-                      {/* MAGIC CORS FIX FOR VERCEL CDN */}
-                      <img src="/logo.png" alt="Puteri Treats Logo" crossOrigin="anonymous" className="w-full h-full object-contain p-1" />
-                    </div>
-                    <div>
-                      <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
-                      <p className="text-[10px] md:text-sm font-bold text-[#1a73e8] mt-0.5 md:mt-1">{selectedSale.id}</p>
-                    </div>
+            {/* This exact div structure is what makes window.print() work properly */}
+            <div id="printable-receipt" className="flex-1 bg-white overflow-y-auto overflow-x-hidden text-slate-800 font-sans relative flex flex-col p-4 md:p-8">
+              
+              <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
+                    <img src="/logo.png" alt="Puteri Treats Logo" crossOrigin="anonymous" className="w-full h-full object-contain p-1" />
                   </div>
-                  <div className="text-right">
-                    <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
-                    <p className="text-[10px] md:text-xs text-slate-500 max-w-[160px] ml-auto">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
+                  <div>
+                    <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
+                    <p className="text-[10px] md:text-sm font-bold text-[#1a73e8] mt-0.5 md:mt-1">{selectedSale.id}</p>
                   </div>
                 </div>
-
-                <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-10">
-                  <div className="flex-1">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h3>
-                    <div className="bg-slate-50/50 p-3 md:p-4 rounded-lg border border-slate-100">
-                      <p className="text-sm md:text-base font-bold text-slate-900 capitalize">{selectedSale.name}</p>
-                      <p className="text-xs md:text-sm text-slate-600 mt-1 whitespace-pre-wrap">{selectedSale.billTo || "No address provided"}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="w-full md:w-1/3 grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-3">
-                    <div className="flex justify-between border-b border-slate-50 pb-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
-                      <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.date.toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between border-b border-slate-50 pb-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivery</span>
-                      <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.deliveryDate}</span>
-                    </div>
-                    <div className="flex justify-between items-center col-span-2 md:col-span-1">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Method</span>
-                      <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] md:text-xs font-bold text-slate-700 border border-slate-200">
-                        {selectedSale.deliveryMethod}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mb-6 md:mb-8 flex-1">
-                  <table className="w-full text-left border-collapse table-fixed">
-                    <thead>
-                      <tr className="border-b-2 border-slate-800">
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[45%]">Item</th>
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-[15%]">Qty</th>
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Price</th>
-                        <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {selectedSale.items?.map((item, idx) => (
-                        <tr key={idx}>
-                          <td className="py-2 md:py-3 font-bold text-slate-800 text-xs md:text-sm truncate pr-1">{item.name}</td>
-                          <td className="py-2 md:py-3 text-center font-medium text-slate-600 text-xs md:text-sm">{item.qty}</td>
-                          <td className="py-2 md:py-3 text-right text-slate-600 text-xs md:text-sm">RM {item.price.toFixed(2)}</td>
-                          <td className="py-2 md:py-3 text-right font-bold text-slate-900 text-xs md:text-sm">RM {(item.price * item.qty).toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
-                  <div className="w-full md:w-auto">
-                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
-                     <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[280px] flex justify-between items-center gap-4">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1 gap-2">
-                              <span className="text-xs font-bold text-slate-700 truncate">Maybank</span>
-                              <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
-                          </div>
-                          <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
-                          <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
-                        </div>
-                        <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
-                           {/* MAGIC CORS FIX FOR VERCEL CDN */}
-                           <img src="/qr.png" alt="DuitNow QR" crossOrigin="anonymous" className="w-full h-full object-contain" />
-                        </div>
-                     </div>
-                  </div>
-
-                  <div className="w-full md:w-[40%] space-y-2">
-                     <div className="flex justify-between text-xs md:text-sm text-slate-500">
-                       <span className="font-medium">Subtotal</span>
-                       <span>RM {(selectedSale.total - (parseFloat(selectedSale.deliveryFee) || 0)).toFixed(2)}</span>
-                     </div>
-                     <div className="flex justify-between text-xs md:text-sm text-slate-800 font-medium border-b border-slate-100 pb-2">
-                       <span>Delivery ({selectedSale.deliveryMethod})</span>
-                       <span>RM {(parseFloat(selectedSale.deliveryFee) || 0).toFixed(2)}</span>
-                     </div>
-                     <div className="flex justify-between items-center pt-1">
-                       <span className="text-sm md:text-base font-bold text-slate-900">Total Due</span>
-                       <span className="text-2xl md:text-3xl font-extrabold text-[#1a73e8]">RM {selectedSale.total.toFixed(2)}</span>
-                     </div>
-                  </div>
-                </div>
-
-                <div className="text-center pt-6 pb-2">
-                  <p className="text-[10px] md:text-xs font-bold text-slate-900">Thank you for your business!</p>
+                <div className="text-right">
+                  <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
+                  <p className="text-[10px] md:text-xs text-slate-500 max-w-[160px] ml-auto">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
                 </div>
               </div>
+
+              <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-10">
+                <div className="flex-1">
+                  <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h3>
+                  <div className="bg-slate-50/50 p-3 md:p-4 rounded-lg border border-slate-100">
+                    <p className="text-sm md:text-base font-bold text-slate-900 capitalize">{selectedSale.name}</p>
+                    <p className="text-xs md:text-sm text-slate-600 mt-1 whitespace-pre-wrap">{selectedSale.billTo || "No address provided"}</p>
+                  </div>
+                </div>
+                
+                <div className="w-full md:w-1/3 grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-3">
+                  <div className="flex justify-between border-b border-slate-50 pb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
+                    <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.date.toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-slate-50 pb-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivery</span>
+                    <span className="font-bold text-slate-900 text-xs md:text-sm">{selectedSale.deliveryDate}</span>
+                  </div>
+                  <div className="flex justify-between items-center col-span-2 md:col-span-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Method</span>
+                    <span className="px-2 py-0.5 bg-slate-100 rounded text-[10px] md:text-xs font-bold text-slate-700 border border-slate-200">
+                      {selectedSale.deliveryMethod}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6 md:mb-8 flex-1">
+                <table className="w-full text-left border-collapse table-fixed">
+                  <thead>
+                    <tr className="border-b-2 border-slate-800">
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[45%]">Item</th>
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center w-[15%]">Qty</th>
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Price</th>
+                      <th className="py-2 text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right w-[20%]">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {selectedSale.items?.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="py-2 md:py-3 font-bold text-slate-800 text-xs md:text-sm truncate pr-1">{item.name}</td>
+                        <td className="py-2 md:py-3 text-center font-medium text-slate-600 text-xs md:text-sm">{item.qty}</td>
+                        <td className="py-2 md:py-3 text-right text-slate-600 text-xs md:text-sm">RM {item.price.toFixed(2)}</td>
+                        <td className="py-2 md:py-3 text-right font-bold text-slate-900 text-xs md:text-sm">RM {(item.price * item.qty).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
+                <div className="w-full md:w-auto">
+                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
+                   <div className="bg-slate-50 p-3 md:p-4 rounded-xl border border-slate-200 w-full md:min-w-[280px] flex justify-between items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1 gap-2">
+                            <span className="text-xs font-bold text-slate-700 truncate">Maybank</span>
+                            <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
+                        </div>
+                        <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
+                        <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
+                      </div>
+                      <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
+                         <img src="/qr.png" alt="DuitNow QR" crossOrigin="anonymous" className="w-full h-full object-contain" />
+                      </div>
+                   </div>
+                </div>
+
+                <div className="w-full md:w-[40%] space-y-2">
+                   <div className="flex justify-between text-xs md:text-sm text-slate-500">
+                     <span className="font-medium">Subtotal</span>
+                     <span>RM {(selectedSale.total - (parseFloat(selectedSale.deliveryFee) || 0)).toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between text-xs md:text-sm text-slate-800 font-medium border-b border-slate-100 pb-2">
+                     <span>Delivery ({selectedSale.deliveryMethod})</span>
+                     <span>RM {(parseFloat(selectedSale.deliveryFee) || 0).toFixed(2)}</span>
+                   </div>
+                   <div className="flex justify-between items-center pt-1">
+                     <span className="text-sm md:text-base font-bold text-slate-900">Total Due</span>
+                     <span className="text-2xl md:text-3xl font-extrabold text-[#1a73e8]">RM {selectedSale.total.toFixed(2)}</span>
+                   </div>
+                </div>
+              </div>
+
+              <div className="text-center pt-6 pb-2">
+                <p className="text-[10px] md:text-xs font-bold text-slate-900">Thank you for your business!</p>
+              </div>
+
             </div>
           </div>
         </div>
