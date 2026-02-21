@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { doc, deleteDoc } from "firebase/firestore";
+import { db } from '../firebase'; 
 
-export default function SalesHistory({ sales, loading }) {
+export default function SalesHistory({ sales, loading, onEditOrder }) {
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Invoice Modal State
   const [selectedSale, setSelectedSale] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
@@ -45,7 +46,6 @@ export default function SalesHistory({ sales, loading }) {
     setTimeout(() => { window.print(); }, 100);
   };
 
-  // --- NEW: DOWNLOAD PNG FUNCTION ---
   const handleDownloadPNG = async () => {
     const receiptElement = document.getElementById('printable-receipt');
     if (!receiptElement) return;
@@ -60,6 +60,17 @@ export default function SalesHistory({ sales, loading }) {
     } catch (error) {
       console.error("Error generating PNG:", error);
       alert("Failed to save image.");
+    }
+  };
+
+  const handleDeleteSale = async (id) => {
+    if (window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+      try {
+        await deleteDoc(doc(db, "sales", id));
+      } catch (error) {
+        console.error("Error deleting order:", error);
+        alert("Failed to delete the order. Please try again.");
+      }
     }
   };
 
@@ -148,9 +159,18 @@ export default function SalesHistory({ sales, loading }) {
                     <td className="hidden md:table-cell py-4 px-6 text-sm"><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">{sale.deliveryMethod || "COD"}</span></td>
                     <td className="py-4 px-6 text-sm font-bold text-right text-slate-900">RM {sale.total?.toFixed(2)}</td>
                     <td className="py-4 px-6 text-right">
-                      <button onClick={() => openInvoice(sale)} className="text-slate-400 hover:text-[#1a73e8] p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Print Invoice">
-                        <Printer size={18} />
-                      </button>
+                      {/* NEW ACTIONS: Edit, Print, and Delete */}
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => onEditOrder(sale)} className="text-slate-400 hover:text-emerald-500 p-2 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit Order">
+                          <Edit2 size={18} />
+                        </button>
+                        <button onClick={() => openInvoice(sale)} className="text-slate-400 hover:text-[#1a73e8] p-2 hover:bg-blue-50 rounded-lg transition-colors" title="Print Invoice">
+                          <Printer size={18} />
+                        </button>
+                        <button onClick={() => handleDeleteSale(sale.id)} className="text-slate-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors" title="Delete Order">
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -165,11 +185,9 @@ export default function SalesHistory({ sales, loading }) {
         <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-[393px] md:max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:rounded-xl">
             
-            {/* Toolbar */}
             <div className="p-4 bg-slate-800 text-white flex justify-between items-center no-print shrink-0">
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Invoice View</span>
               
-              {/* NEW TOOLBAR BUTTONS */}
               <div className="flex gap-2">
                  <button onClick={handleDownloadPNG} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
                     <Download size={14}/> <span className="hidden md:inline">Save PNG</span><span className="md:hidden">PNG</span>
@@ -181,14 +199,12 @@ export default function SalesHistory({ sales, loading }) {
               </div>
             </div>
 
-            {/* --- INVOICE PAPER (Printable Area) --- */}
             <div id="printable-receipt" className="flex-1 bg-white overflow-y-auto overflow-x-hidden text-slate-800 font-sans relative flex flex-col p-4 md:p-8">
               
-              {/* Header */}
               <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
                 <div className="flex items-center gap-3 md:gap-4">
                   <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
-                    <img src="/logo.png" alt="Pu3's Treats Logo" className="w-full h-full object-contain p-1" />
+                    <img src="/logo.png" alt="Puteri Treats Logo" className="w-full h-full object-contain p-1" />
                   </div>
                   <div>
                     <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
@@ -196,13 +212,12 @@ export default function SalesHistory({ sales, loading }) {
                   </div>
                 </div>
                 <div className="text-right">
+                  {/* BRAND NEW BUSINESS DETAILS */}
                   <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
-                  <p className="text-[10px] md:text-xs text-slate-500">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor, Malaysia</p>
-                  <p className="text-[10px] md:text-xs text-slate-500">012-200 8041</p>
+                  <p className="text-[10px] md:text-xs text-slate-500 max-w-[160px] ml-auto">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
                 </div>
               </div>
 
-              {/* Info Grid */}
               <div className="flex flex-col md:flex-row gap-6 md:gap-12 mb-6 md:mb-10">
                 <div className="flex-1">
                   <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Bill To</h3>
@@ -230,7 +245,6 @@ export default function SalesHistory({ sales, loading }) {
                 </div>
               </div>
 
-              {/* Items Table */}
               <div className="mb-6 md:mb-8 flex-1">
                 <table className="w-full text-left border-collapse table-fixed">
                   <thead>
@@ -254,7 +268,6 @@ export default function SalesHistory({ sales, loading }) {
                 </table>
               </div>
 
-              {/* Footer Section with QR Code */}
               <div className="flex flex-col md:flex-row justify-between items-start pt-4 md:pt-6 border-t-2 border-slate-100 mt-auto gap-4">
                 <div className="w-full md:w-auto">
                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Payment Info</h3>
@@ -265,7 +278,8 @@ export default function SalesHistory({ sales, loading }) {
                             <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
                         </div>
                         <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
-                        <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Pu3's Treats</p>
+                        {/* BRAND NEW BANK NAME */}
+                        <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
                       </div>
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
                          <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
@@ -279,7 +293,7 @@ export default function SalesHistory({ sales, loading }) {
                      <span>RM {(selectedSale.total - (parseFloat(selectedSale.deliveryFee) || 0)).toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between text-xs md:text-sm text-slate-800 font-medium border-b border-slate-100 pb-2">
-                     <span>Delivery</span>
+                     <span>Delivery ({selectedSale.deliveryMethod})</span>
                      <span>RM {(parseFloat(selectedSale.deliveryFee) || 0).toFixed(2)}</span>
                    </div>
                    <div className="flex justify-between items-center pt-1">

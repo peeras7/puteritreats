@@ -10,19 +10,31 @@ import SalesHistory from './pages/SalesHistory';
 import Login from './pages/Login'; 
 
 export default function App() {
-  // Auth State
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // App State
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [cart, setCart] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [sales, setSales] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(true); 
 
-  // --- 1. CHECK LOGIN STATUS ---
+  // --- MULTIPLE CARTS (TABS) STATE ---
+  const createEmptyCart = () => ({
+    id: Date.now().toString(), 
+    name: '', 
+    items: [],
+    deliveryFee: '',
+    deliveryMethod: 'Grab',
+    billTo: '',
+    deliveryDate: new Date().toISOString().split('T')[0]
+  });
+
+  const [carts, setCarts] = useState([createEmptyCart()]);
+  const [activeCartId, setActiveCartId] = useState(carts[0].id);
+
+  const activeCart = carts.find(c => c.id === activeCartId) || carts[0];
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -31,18 +43,15 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // --- 2. FETCH INVENTORY & SALES ---
   useEffect(() => {
     if (!user) return; 
 
-    // Fetch Inventory
     const unsubInv = onSnapshot(collection(db, "inventory"), (snapshot) => {
       const inventoryList = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
       setInventory(inventoryList);
       setLoading(false);
     });
 
-    // Fetch Sales (Ordered by newest first)
     const q = query(collection(db, "sales"), orderBy("date", "desc"));
     const unsubSales = onSnapshot(q, (snapshot) => {
       const salesList = snapshot.docs.map(doc => ({
@@ -54,52 +63,86 @@ export default function App() {
       setSalesLoading(false);
     });
 
-    return () => {
-      unsubInv();
-      unsubSales();
-    };
+    return () => { unsubInv(); unsubSales(); };
   }, [user]); 
 
-  // --- 3. CART LOGIC ---
+  // --- CART TAB FUNCTIONS ---
+  const handleAddCart = () => {
+    const newCart = createEmptyCart();
+    setCarts([...carts, newCart]);
+    setActiveCartId(newCart.id);
+  };
+
+  const handleRemoveCart = (id) => {
+    if (carts.length === 1) {
+      const newCart = createEmptyCart();
+      setCarts([newCart]);
+      setActiveCartId(newCart.id);
+    } else {
+      const newCarts = carts.filter(c => c.id !== id);
+      setCarts(newCarts);
+      if (activeCartId === id) setActiveCartId(newCarts[0].id);
+    }
+  };
+
+  const updateCartName = (newName) => {
+    setCarts(carts.map(c => c.id === activeCartId ? { ...c, name: newName } : c));
+  };
+
   const addToCart = (product) => {
-    setCart((prev) => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
-      return [...prev, { ...product, qty: 1 }];
-    });
+    setCarts(carts.map(c => {
+      if (c.id === activeCartId) {
+        const existing = c.items.find(item => item.id === product.id);
+        if (existing) return { ...c, items: c.items.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item) };
+        return { ...c, items: [...c.items, { ...product, qty: 1 }] };
+      }
+      return c;
+    }));
   };
   
-  const updateQty = (id, delta) => setCart((prev) => prev.map(item => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item).filter(item => item.qty > 0));
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const updateQty = (id, delta) => {
+    setCarts(carts.map(c => {
+      if (c.id === activeCartId) {
+        return { ...c, items: c.items.map(item => item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item).filter(item => item.qty > 0) };
+      }
+      return c;
+    }));
+  };
 
-  // --- 4. CHECKOUT LOGIC ---
-  const handleCheckout = async (invoiceData) => {
+  // --- NEW: EDIT PAST ORDER FUNCTION ---
+  const handleEditPastOrder = (order) => {
+    const existingTab = carts.find(c => c.id === order.id);
+    if (!existingTab) {
+      // Create a new tab pre-filled with the old order's data
+      setCarts([...carts, {
+        id: order.id,
+        name: order.name || '',
+        items: order.items || [],
+        deliveryFee: order.deliveryFee || '',
+        deliveryMethod: order.deliveryMethod || 'Grab',
+        billTo: order.billTo || '',
+        deliveryDate: order.deliveryDate || new Date().toISOString().split('T')[0]
+      }]);
+    }
+    setActiveCartId(order.id);
+    setActiveTab('dashboard'); // Jump to the POS screen
+  };
+
+  const cartTotal = activeCart.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+  const handleCheckout = async (invoiceData, cartIdToRemove) => {
     try {
       const batch = writeBatch(db);
-      // Use the custom ID (e.g., pt001) instead of a random string
       const saleRef = doc(db, "sales", invoiceData.id); 
-      const finalTotal = cartTotal + (parseFloat(invoiceData.deliveryFee) || 0);
       
       batch.set(saleRef, {
         ...invoiceData,
-        items: cart,
-        total: finalTotal,
         date: new Date(),
         userId: user.uid 
       });
 
-      // Deduct stock levels in inventory (Optional - simple version)
-      cart.forEach(cartItem => {
-         const invItem = inventory.find(i => i.id === cartItem.id);
-         if(invItem) {
-             const invRef = doc(db, "inventory", invItem.id);
-             batch.update(invRef, { qty: Math.max(0, invItem.qty - cartItem.qty) });
-         }
-      });
-
       await batch.commit();
-      alert(`Order ${invoiceData.id} Successfully Saved!`);
-      setCart([]); 
+      handleRemoveCart(cartIdToRemove);
       return true;
     } catch (e) {
       console.error("Error saving order: ", e);
@@ -108,24 +151,12 @@ export default function App() {
     }
   };
 
-  // --- RENDER ---
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#eef2f6]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a73e8]"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-[#eef2f6]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a73e8]"></div></div>;
+  if (!user) return <Login />;
 
   return (
     <div className="min-h-screen md:p-8 flex justify-center items-center selection:bg-blue-100 text-slate-800 bg-[#eef2f6]">
-      <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-      </style>
+      <style>@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');</style>
       
       <div className="bg-white/50 md:backdrop-blur-3xl md:rounded-[32px] w-full max-w-[1400px] h-screen md:h-[90vh] flex flex-col md:flex-row overflow-hidden shadow-none md:shadow-2xl ring-0 md:ring-1 ring-white/60">
         
@@ -143,23 +174,32 @@ export default function App() {
             {activeTab === 'inventory' && <Inventory inventory={inventory} />}
             
             {activeTab === 'dashboard' && (
-              <PosDashboard 
-                inventory={inventory} 
-                cart={cart} 
-                setCart={setCart} 
-                addToCart={addToCart} 
-                updateQty={updateQty} 
-                cartTotal={cartTotal}
-                onCheckout={(data) => handleCheckout(data)}
-                sales={sales}
-              />
+              <div className="h-full w-full overflow-auto p-4 md:p-8">
+                <PosDashboard 
+                  inventory={inventory} 
+                  carts={carts}
+                  activeCartId={activeCartId}
+                  setActiveCartId={setActiveCartId}
+                  activeCart={activeCart}
+                  handleAddCart={handleAddCart}
+                  handleRemoveCart={handleRemoveCart}
+                  updateCartName={updateCartName}
+                  addToCart={addToCart} 
+                  updateQty={updateQty} 
+                  cartTotal={cartTotal}
+                  onCheckout={handleCheckout}
+                  sales={sales}
+                />
+              </div>
             )}
 
             {activeTab === 'sales' && (
-              <SalesHistory sales={sales} loading={salesLoading} /> 
+              <div className="h-full w-full overflow-auto p-4 md:p-8">
+                {/* Passed the edit function into the History tab */}
+                <SalesHistory sales={sales} loading={salesLoading} onEditOrder={handleEditPastOrder} /> 
+              </div>
             )}
           </div>
-          
         </div>
       </div>
     </div>
