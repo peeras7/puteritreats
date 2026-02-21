@@ -16,11 +16,28 @@ export default function PosDashboard({
   });
   const [invoiceId, setInvoiceId] = useState('');
 
+  // --- THE FIX: SMART ID GENERATOR ---
   const initiateCheckout = () => {
     if (activeCart.items.length === 0) return;
     
     const isExistingOrder = activeCart.id.startsWith('pt');
-    const formattedId = isExistingOrder ? activeCart.id : "pt" + String(sales.length + 1).padStart(3, '0');
+    let formattedId;
+
+    if (isExistingOrder) {
+      formattedId = activeCart.id;
+    } else {
+      // Find the highest existing order number so we NEVER overwrite old orders!
+      let maxOrderNum = 0;
+      sales.forEach(sale => {
+        if (sale.id && sale.id.startsWith('pt')) {
+          const num = parseInt(sale.id.replace('pt', ''), 10);
+          if (!isNaN(num) && num > maxOrderNum) {
+            maxOrderNum = num;
+          }
+        }
+      });
+      formattedId = "pt" + String(maxOrderNum + 1).padStart(3, '0');
+    }
     
     setInvoiceId(formattedId);
     
@@ -249,7 +266,7 @@ export default function PosDashboard({
         </div>
       )}
 
-      {/* --- FINAL INVOICE PREVIEW (REVERTED TO PRINTABLE STRUCTURE) --- */}
+      {/* --- FINAL INVOICE PREVIEW --- */}
       {isReceiptOpen && receiptData && (
         <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-[393px] md:max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:rounded-xl">
