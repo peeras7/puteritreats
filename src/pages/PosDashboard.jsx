@@ -106,8 +106,8 @@ export default function PosDashboard({
         </div>
       </div>
 
-      {/* --- CART PANEL (MADE TALLER FOR MOBILE: h-[60vh]) --- */}
-      <div className="w-full md:w-[380px] h-[60vh] md:h-full bg-white rounded-t-[24px] md:rounded-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:shadow-sm border border-slate-50 flex flex-col overflow-hidden shrink-0 no-print z-20">
+      {/* --- CART PANEL (REVERTED TO h-[45vh]) --- */}
+      <div className="w-full md:w-[380px] h-[45vh] md:h-full bg-white rounded-t-[24px] md:rounded-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:shadow-sm border border-slate-50 flex flex-col overflow-hidden shrink-0 no-print z-20">
         
         <div className="p-4 md:p-5 border-b border-slate-100 bg-white sticky top-0 flex flex-col gap-4 shrink-0 shadow-sm z-10">
           <div className="flex justify-between items-center">
@@ -117,6 +117,7 @@ export default function PosDashboard({
             </button>
           </div>
           
+          {/* TABS ROW (Scrollable horizontally) */}
           <div className="flex gap-2 overflow-x-auto pb-2 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {carts.map(c => (
               <button 
@@ -187,16 +188,13 @@ export default function PosDashboard({
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
           
-          {/* We separated the modal into a flex-col so the button stays docked at the bottom */}
           <div className="bg-white w-full md:max-w-lg rounded-t-[32px] md:rounded-[32px] shadow-2xl p-6 md:p-8 border border-white/50 animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
             
-            {/* Header stays pinned */}
             <div className="flex justify-between items-center mb-6 shrink-0">
               <h3 className="text-xl md:text-2xl font-bold text-slate-800">Invoice Details</h3>
               <button onClick={() => setIsCheckoutOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={24} /></button>
             </div>
             
-            {/* ONLY the inputs scroll */}
             <div className="space-y-4 flex-1 overflow-y-auto pr-2 pb-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Customer Name</label>
@@ -244,7 +242,6 @@ export default function PosDashboard({
               </div>
             </div>
 
-            {/* Button stays pinned to the bottom */}
             <div className="pt-4 mt-auto border-t border-slate-100 shrink-0 bg-white">
               <button onClick={finalizeOrder} disabled={!orderDetails.name} className={`w-full py-4 rounded-xl md:rounded-2xl font-bold text-lg flex items-center justify-center space-x-2 transition-all shadow-lg active:scale-95 ${orderDetails.name ? 'bg-[#1a73e8] text-white shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
                 <FileText size={20} /><span>{activeCart.id.startsWith('pt') ? 'Update Invoice' : 'Generate Invoice'}</span>
