@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingCart, Plus, Minus, Cookie, X, CheckCircle, User, MapPin, Printer, FileText, Truck, DollarSign, Download } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, Cookie, X, CheckCircle, User, MapPin, Printer, FileText, Truck, DollarSign, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 export default function PosDashboard({ 
@@ -57,45 +57,48 @@ export default function PosDashboard({
 
   const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
 
-  // --- BULLETPROOF IMAGE DOWNLOAD ---
-  const handleDownloadImage = async () => {
+  // --- THE ULTIMATE iOS/ANDROID SHARE FIX ---
+  const handleShareImage = async () => {
     const receiptElement = document.getElementById('receipt-capture-area');
     if (!receiptElement) return;
 
     try {
-      // Temporarily expand to full height
-      const originalOverflow = receiptElement.style.overflow;
-      const originalHeight = receiptElement.style.height;
-      receiptElement.style.overflow = 'visible';
-      receiptElement.style.height = 'auto';
-
-      // Give the browser a tiny split second to process the height change
-      await new Promise(resolve => setTimeout(resolve, 100));
-
+      // Create a high-quality JPEG
       const canvas = await html2canvas(receiptElement, { 
-        scale: 1.5, // Lowered from 2 to prevent iOS memory crash
+        scale: 2, 
         backgroundColor: '#ffffff',
-        useCORS: true, 
-        allowTaint: true // Forces it to draw the logo and QR code no matter what
+        useCORS: true 
       });
-      
-      // Restore the scroll limits
-      receiptElement.style.overflow = originalOverflow;
-      receiptElement.style.height = originalHeight;
 
-      // Convert to JPEG (much smaller file size to avoid mobile blockers)
-      const image = canvas.toDataURL("image/jpeg", 0.9);
+      // Convert to JPEG Data URL
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
       
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `Invoice_${invoiceId}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Convert Data URL to a real File object for sharing
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `Invoice_${invoiceId}.jpg`, { type: 'image/jpeg' });
 
+      // Trigger the native phone share menu!
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Invoice ${invoiceId}`,
+          });
+        } catch (err) {
+          console.log("User closed share menu.");
+        }
+      } else {
+        // Fallback for PC or older browsers
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `Invoice_${invoiceId}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
-      console.error("Image capture error:", error);
-      alert("Failed to download image. Try taking a screenshot!");
+      console.error("Image generation error:", error);
+      alert("Oops! Your phone blocked the generation. Please take a screenshot!");
     }
   };
 
@@ -284,8 +287,8 @@ export default function PosDashboard({
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Ready</span>
               
               <div className="flex gap-2">
-                 <button onClick={handleDownloadImage} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
-                    <Download size={14}/> <span className="hidden md:inline">Download Image</span><span className="md:hidden">Save</span>
+                 <button onClick={handleShareImage} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
+                    <Share2 size={14}/> <span>Share Image</span>
                  </button>
                  <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
                     <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>
@@ -300,7 +303,8 @@ export default function PosDashboard({
                 <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
                   <div className="flex items-center gap-3 md:gap-4">
                     <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
-                      <img src="/logo.png" alt="Puteri Treats Logo" className="w-full h-full object-contain p-1" />
+                      {/* MAGIC CORS FIX FOR VERCEL CDN */}
+                      <img src="/logo.png" alt="Puteri Treats Logo" crossOrigin="anonymous" className="w-full h-full object-contain p-1" />
                     </div>
                     <div>
                       <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
@@ -375,7 +379,8 @@ export default function PosDashboard({
                           <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
                         </div>
                         <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
-                           <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
+                           {/* MAGIC CORS FIX FOR VERCEL CDN */}
+                           <img src="/qr.png" alt="DuitNow QR" crossOrigin="anonymous" className="w-full h-full object-contain" />
                         </div>
                      </div>
                   </div>

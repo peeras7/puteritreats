@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2 } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2, Share2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from '../firebase'; 
@@ -46,41 +46,42 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
     setTimeout(() => { window.print(); }, 100);
   };
 
-  // --- BULLETPROOF IMAGE DOWNLOAD ---
-  const handleDownloadImage = async () => {
+  // --- THE ULTIMATE iOS/ANDROID SHARE FIX ---
+  const handleShareImage = async () => {
     const receiptElement = document.getElementById('receipt-capture-area');
     if (!receiptElement) return;
 
     try {
-      const originalOverflow = receiptElement.style.overflow;
-      const originalHeight = receiptElement.style.height;
-      receiptElement.style.overflow = 'visible';
-      receiptElement.style.height = 'auto';
-
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       const canvas = await html2canvas(receiptElement, { 
-        scale: 1.5, 
+        scale: 2, 
         backgroundColor: '#ffffff',
-        useCORS: true,
-        allowTaint: true 
+        useCORS: true 
       });
-      
-      receiptElement.style.overflow = originalOverflow;
-      receiptElement.style.height = originalHeight;
 
-      const image = canvas.toDataURL("image/jpeg", 0.9);
-      
-      const link = document.createElement('a');
-      link.href = image;
-      link.download = `Invoice_${selectedSale.id}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `Invoice_${selectedSale.id}.jpg`, { type: 'image/jpeg' });
 
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `Invoice ${selectedSale.id}`,
+          });
+        } catch (err) {
+          console.log("User closed share menu.");
+        }
+      } else {
+        const link = document.createElement('a');
+        link.href = dataUrl;
+        link.download = `Invoice_${selectedSale.id}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
-      console.error("Error generating image:", error);
-      alert("Failed to download image. Try taking a screenshot!");
+      console.error("Image generation error:", error);
+      alert("Oops! Your phone blocked the generation. Please take a screenshot!");
     }
   };
 
@@ -209,8 +210,8 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Invoice View</span>
               
               <div className="flex gap-2">
-                 <button onClick={handleDownloadImage} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
-                    <Download size={14}/> <span className="hidden md:inline">Download Image</span><span className="md:hidden">Save</span>
+                 <button onClick={handleShareImage} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
+                    <Share2 size={14}/> <span>Share Image</span>
                  </button>
                  <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
                     <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>
@@ -225,7 +226,8 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
                 <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
                   <div className="flex items-center gap-3 md:gap-4">
                     <div className="w-10 h-10 md:w-14 md:h-14 bg-white rounded-full flex items-center justify-center shrink-0 overflow-hidden border-2 border-slate-100">
-                      <img src="/logo.png" alt="Puteri Treats Logo" className="w-full h-full object-contain p-1" />
+                      {/* MAGIC CORS FIX FOR VERCEL CDN */}
+                      <img src="/logo.png" alt="Puteri Treats Logo" crossOrigin="anonymous" className="w-full h-full object-contain p-1" />
                     </div>
                     <div>
                       <h1 className="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight">INVOICE</h1>
@@ -246,6 +248,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
                       <p className="text-xs md:text-sm text-slate-600 mt-1 whitespace-pre-wrap">{selectedSale.billTo || "No address provided"}</p>
                     </div>
                   </div>
+                  
                   <div className="w-full md:w-1/3 grid grid-cols-2 md:grid-cols-1 gap-2 md:space-y-3">
                     <div className="flex justify-between border-b border-slate-50 pb-1">
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date</span>
@@ -300,7 +303,8 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
                           <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
                         </div>
                         <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
-                           <img src="/qr.png" alt="DuitNow QR" className="w-full h-full object-contain" />
+                           {/* MAGIC CORS FIX FOR VERCEL CDN */}
+                           <img src="/qr.png" alt="DuitNow QR" crossOrigin="anonymous" className="w-full h-full object-contain" />
                         </div>
                      </div>
                   </div>
@@ -329,6 +333,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
           </div>
         </div>
       )}
+
     </div>
   );
 }
