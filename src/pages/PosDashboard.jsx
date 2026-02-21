@@ -19,13 +19,11 @@ export default function PosDashboard({
   const initiateCheckout = () => {
     if (activeCart.items.length === 0) return;
     
-    // Check if this tab is an existing order (starts with pt) or a brand new one
     const isExistingOrder = activeCart.id.startsWith('pt');
     const formattedId = isExistingOrder ? activeCart.id : "pt" + String(sales.length + 1).padStart(3, '0');
     
     setInvoiceId(formattedId);
     
-    // Pre-fill the modal with the tab's data (useful if editing an old order!)
     setOrderDetails({
       name: activeCart.name || '',
       billTo: activeCart.billTo || '',
@@ -108,43 +106,43 @@ export default function PosDashboard({
         </div>
       </div>
 
-      {/* --- CART PANEL --- */}
-      <div className="w-full md:w-[380px] h-[35vh] md:h-full bg-white rounded-t-[24px] md:rounded-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:shadow-sm border border-slate-50 flex flex-col overflow-hidden shrink-0 no-print z-20">
+      {/* --- CART PANEL (MADE TALLER FOR MOBILE: h-[60vh]) --- */}
+      <div className="w-full md:w-[380px] h-[60vh] md:h-full bg-white rounded-t-[24px] md:rounded-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:shadow-sm border border-slate-50 flex flex-col overflow-hidden shrink-0 no-print z-20">
         
-        <div className="p-4 md:p-5 border-b border-slate-50 bg-white sticky top-0 flex flex-col gap-3 shrink-0">
+        <div className="p-4 md:p-5 border-b border-slate-100 bg-white sticky top-0 flex flex-col gap-4 shrink-0 shadow-sm z-10">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-lg tracking-tight">Open Orders</h3>
-            <button onClick={handleAddCart} className="bg-blue-50 text-[#1a73e8] px-2 py-1.5 rounded-lg font-bold flex items-center gap-1 text-xs hover:bg-blue-100 transition-colors">
-              <Plus size={16} /> New Tab
+            <h3 className="font-bold text-xl tracking-tight">Open Orders</h3>
+            <button onClick={handleAddCart} className="bg-blue-50 text-[#1a73e8] px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 text-sm hover:bg-blue-100 transition-colors shadow-sm active:scale-95">
+              <Plus size={18} /> New Tab
             </button>
           </div>
           
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex gap-2 overflow-x-auto pb-2 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {carts.map(c => (
               <button 
                 key={c.id} 
                 onClick={() => setActiveCartId(c.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap flex items-center gap-2 transition-all ${activeCartId === c.id ? 'bg-[#1a73e8] text-white shadow-md shadow-blue-500/20' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                className={`px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap flex items-center gap-2 transition-all active:scale-95 ${activeCartId === c.id ? 'bg-[#1a73e8] text-white shadow-md shadow-blue-500/30' : 'bg-slate-50 text-slate-600 hover:bg-slate-200 border border-slate-200'}`}
               >
                 {c.name || (c.id.startsWith('pt') ? c.id : 'New Order')}
                 {carts.length > 1 && (
                    <div 
                      onClick={(e) => { e.stopPropagation(); handleRemoveCart(c.id); }}
-                     className={`p-0.5 rounded-full ${activeCartId === c.id ? 'hover:bg-blue-600' : 'hover:bg-slate-300'}`}
+                     className={`p-1 rounded-full ml-1 ${activeCartId === c.id ? 'hover:bg-blue-600 bg-blue-500/50' : 'hover:bg-slate-300 bg-slate-200 text-slate-500'}`}
                    >
-                     <X size={12} />
+                     <X size={14} />
                    </div>
                 )}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center bg-slate-50 rounded-xl px-3 py-2 border border-slate-100 focus-within:ring-2 ring-blue-500/20 transition-all">
-            <User size={16} className="text-slate-400 mr-2" />
+          <div className="flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 focus-within:ring-2 ring-blue-500/20 transition-all shadow-inner">
+            <User size={20} className="text-slate-400 mr-3" />
             <input 
               type="text" 
               placeholder="Enter Customer Name..." 
-              className="bg-transparent w-full outline-none text-slate-800 font-bold text-sm"
+              className="bg-transparent w-full outline-none text-slate-800 font-bold text-base placeholder:text-slate-400"
               value={activeCart.name}
               onChange={(e) => updateCartName(e.target.value)}
             />
@@ -154,20 +152,20 @@ export default function PosDashboard({
         <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
           {activeCart.items.length === 0 ? (
              <div className="h-full flex flex-col items-center justify-center text-slate-300">
-               <ShoppingCart size={32} className="mb-3 text-slate-200 md:w-12 md:h-12" />
-               <p className="text-sm font-medium">Cart is empty</p>
+               <ShoppingCart size={40} className="mb-4 text-slate-200" />
+               <p className="text-base font-medium">Cart is empty</p>
              </div>
           ) : (
             activeCart.items.map(item => (
               <div key={item.id} className="flex justify-between items-center animation-fade-in">
                 <div className="flex-1 pr-2">
-                  <p className="font-bold text-xs md:text-sm line-clamp-1">{item.name}</p>
-                  <p className="text-[10px] md:text-xs text-slate-400">RM {item.price.toFixed(2)}</p>
+                  <p className="font-bold text-sm line-clamp-1">{item.name}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">RM {item.price.toFixed(2)}</p>
                 </div>
-                <div className="flex items-center bg-slate-50 rounded-full p-1 border border-slate-100">
-                  <button onClick={(e) => { e.stopPropagation(); updateQty(item.id, -1); }} className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center hover:bg-white text-slate-500"><Minus size={14} /></button>
-                  <span className="w-6 text-center text-xs md:text-sm font-bold">{item.qty}</span>
-                  <button onClick={(e) => { e.stopPropagation(); updateQty(item.id, 1); }} className="w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center hover:bg-white text-slate-500"><Plus size={14} /></button>
+                <div className="flex items-center bg-slate-50 rounded-full p-1.5 border border-slate-200">
+                  <button onClick={(e) => { e.stopPropagation(); updateQty(item.id, -1); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white text-slate-500 bg-slate-100 shadow-sm"><Minus size={16} /></button>
+                  <span className="w-8 text-center text-sm font-bold">{item.qty}</span>
+                  <button onClick={(e) => { e.stopPropagation(); updateQty(item.id, 1); }} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white text-slate-500 bg-slate-100 shadow-sm"><Plus size={16} /></button>
                 </div>
               </div>
             ))
@@ -179,22 +177,27 @@ export default function PosDashboard({
             <span className="text-slate-500 font-medium text-sm">Subtotal</span>
             <span className="text-2xl md:text-3xl font-bold text-[#1a73e8]">RM {cartTotal.toFixed(2)}</span>
           </div>
-          <button onClick={initiateCheckout} disabled={activeCart.items.length === 0} className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold text-base md:text-lg transition-all shadow-lg active:scale-95 ${activeCart.items.length > 0 ? 'bg-[#1a73e8] text-white shadow-blue-500/25' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+          <button onClick={initiateCheckout} disabled={activeCart.items.length === 0} className={`w-full py-4 rounded-xl md:rounded-2xl font-bold text-lg transition-all shadow-lg active:scale-95 ${activeCart.items.length > 0 ? 'bg-[#1a73e8] text-white shadow-blue-500/25' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
             Proceed to Invoice
           </button>
         </div>
       </div>
 
-      {/* --- CHECKOUT FORM MODAL --- */}
+      {/* --- CHECKOUT FORM MODAL (FIXED SCROLLING) --- */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white w-full md:max-w-lg rounded-t-[32px] md:rounded-[32px] shadow-2xl p-6 md:p-8 border border-white/50 animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+          
+          {/* We separated the modal into a flex-col so the button stays docked at the bottom */}
+          <div className="bg-white w-full md:max-w-lg rounded-t-[32px] md:rounded-[32px] shadow-2xl p-6 md:p-8 border border-white/50 animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+            
+            {/* Header stays pinned */}
+            <div className="flex justify-between items-center mb-6 shrink-0">
               <h3 className="text-xl md:text-2xl font-bold text-slate-800">Invoice Details</h3>
               <button onClick={() => setIsCheckoutOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={24} /></button>
             </div>
             
-            <div className="space-y-4 mb-8">
+            {/* ONLY the inputs scroll */}
+            <div className="space-y-4 flex-1 overflow-y-auto pr-2 pb-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Customer Name</label>
                 <div className="flex items-center bg-slate-50 rounded-xl px-4 py-3 border border-slate-100 focus-within:ring-2 ring-blue-500/20">
@@ -241,9 +244,13 @@ export default function PosDashboard({
               </div>
             </div>
 
-            <button onClick={finalizeOrder} disabled={!orderDetails.name} className={`w-full py-4 rounded-xl md:rounded-2xl font-bold text-lg flex items-center justify-center space-x-2 transition-all shadow-lg active:scale-95 ${orderDetails.name ? 'bg-[#1a73e8] text-white shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
-              <FileText size={20} /><span>{activeCart.id.startsWith('pt') ? 'Update Invoice' : 'Generate Invoice'}</span>
-            </button>
+            {/* Button stays pinned to the bottom */}
+            <div className="pt-4 mt-auto border-t border-slate-100 shrink-0 bg-white">
+              <button onClick={finalizeOrder} disabled={!orderDetails.name} className={`w-full py-4 rounded-xl md:rounded-2xl font-bold text-lg flex items-center justify-center space-x-2 transition-all shadow-lg active:scale-95 ${orderDetails.name ? 'bg-[#1a73e8] text-white shadow-blue-500/30' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
+                <FileText size={20} /><span>{activeCart.id.startsWith('pt') ? 'Update Invoice' : 'Generate Invoice'}</span>
+              </button>
+            </div>
+
           </div>
         </div>
       )}
@@ -279,7 +286,6 @@ export default function PosDashboard({
                   </div>
                 </div>
                 <div className="text-right">
-                  {/* BRAND NEW BUSINESS DETAILS */}
                   <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
                   <p className="text-[10px] md:text-xs text-slate-500 max-w-[160px] ml-auto">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
                 </div>
@@ -344,7 +350,6 @@ export default function PosDashboard({
                             <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
                         </div>
                         <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
-                        {/* BRAND NEW BANK NAME */}
                         <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
                       </div>
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">
