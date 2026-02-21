@@ -46,20 +46,37 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
     setTimeout(() => { window.print(); }, 100);
   };
 
+  // --- UPDATED DOWNLOAD FUNCTION FOR MOBILE ---
   const handleDownloadPNG = async () => {
     const receiptElement = document.getElementById('printable-receipt');
     if (!receiptElement) return;
 
     try {
-      const canvas = await html2canvas(receiptElement, { scale: 2, useCORS: true });
+      const originalOverflow = receiptElement.style.overflow;
+      const originalHeight = receiptElement.style.height;
+      receiptElement.style.overflow = 'visible';
+      receiptElement.style.height = 'auto';
+
+      const canvas = await html2canvas(receiptElement, { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#ffffff' 
+      });
+      
+      receiptElement.style.overflow = originalOverflow;
+      receiptElement.style.height = originalHeight;
+
       const imgData = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = imgData;
       link.download = `Invoice_${selectedSale.id}.png`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+
     } catch (error) {
       console.error("Error generating PNG:", error);
-      alert("Failed to save image.");
+      alert("Failed to save image. You can always take a screenshot as a backup!");
     }
   };
 
@@ -159,7 +176,6 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
                     <td className="hidden md:table-cell py-4 px-6 text-sm"><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">{sale.deliveryMethod || "COD"}</span></td>
                     <td className="py-4 px-6 text-sm font-bold text-right text-slate-900">RM {sale.total?.toFixed(2)}</td>
                     <td className="py-4 px-6 text-right">
-                      {/* NEW ACTIONS: Edit, Print, and Delete */}
                       <div className="flex justify-end gap-1">
                         <button onClick={() => onEditOrder(sale)} className="text-slate-400 hover:text-emerald-500 p-2 hover:bg-emerald-50 rounded-lg transition-colors" title="Edit Order">
                           <Edit2 size={18} />
@@ -212,7 +228,6 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
                   </div>
                 </div>
                 <div className="text-right">
-                  {/* BRAND NEW BUSINESS DETAILS */}
                   <h2 className="text-sm md:text-lg font-bold text-slate-900">Puteri Treats</h2>
                   <p className="text-[10px] md:text-xs text-slate-500 max-w-[160px] ml-auto">Jalan SS 3/44, Taman Universiti, 47300 Petaling Jaya, Selangor</p>
                 </div>
@@ -278,7 +293,6 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
                             <span className="text-[9px] font-bold bg-yellow-400 text-black px-1.5 py-0.5 rounded shrink-0">MBB</span>
                         </div>
                         <p className="text-sm md:text-base font-mono font-bold text-slate-900 tracking-wide truncate">157175142374</p>
-                        {/* BRAND NEW BANK NAME */}
                         <p className="text-[10px] font-medium text-slate-500 uppercase mt-1 truncate">Puteri Wasimah</p>
                       </div>
                       <div className="w-16 h-16 md:w-20 md:h-20 bg-white p-1 rounded-lg border border-slate-100 shrink-0 flex items-center justify-center">

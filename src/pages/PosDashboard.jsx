@@ -57,19 +57,41 @@ export default function PosDashboard({
 
   const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
 
+  // --- UPDATED DOWNLOAD FUNCTION FOR MOBILE ---
   const handleDownloadPNG = async () => {
     const receiptElement = document.getElementById('printable-receipt');
     if (!receiptElement) return;
+
     try {
-      const canvas = await html2canvas(receiptElement, { scale: 2, useCORS: true });
+      // 1. Temporarily remove scroll limits so html2canvas can see the whole thing
+      const originalOverflow = receiptElement.style.overflow;
+      const originalHeight = receiptElement.style.height;
+      receiptElement.style.overflow = 'visible';
+      receiptElement.style.height = 'auto';
+
+      // 2. Take the picture with a solid white background
+      const canvas = await html2canvas(receiptElement, { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#ffffff' 
+      });
+      
+      // 3. Put the scrollbar back immediately
+      receiptElement.style.overflow = originalOverflow;
+      receiptElement.style.height = originalHeight;
+
+      // 4. Force the mobile download
       const imgData = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = imgData;
       link.download = `Invoice_${invoiceId}.png`;
+      document.body.appendChild(link); // Crucial for iPhones
       link.click();
+      document.body.removeChild(link);
+
     } catch (error) {
       console.error("Error generating PNG:", error);
-      alert("Failed to save image.");
+      alert("Failed to save image. You can always take a screenshot as a backup!");
     }
   };
 
@@ -106,7 +128,7 @@ export default function PosDashboard({
         </div>
       </div>
 
-      {/* --- CART PANEL (Taller at 55vh, but keeping small compact text) --- */}
+      {/* --- CART PANEL --- */}
       <div className="w-full md:w-[380px] h-[55vh] md:h-full bg-white rounded-t-[24px] md:rounded-[32px] shadow-[0_-4px_20px_rgba(0,0,0,0.05)] md:shadow-sm border border-slate-50 flex flex-col overflow-hidden shrink-0 no-print z-20">
         
         <div className="p-4 md:p-5 border-b border-slate-50 bg-white sticky top-0 flex flex-col gap-3 shrink-0 shadow-sm z-10">
@@ -183,7 +205,7 @@ export default function PosDashboard({
         </div>
       </div>
 
-      {/* --- CHECKOUT FORM MODAL (FIXED SCROLLING) --- */}
+      {/* --- CHECKOUT FORM MODAL --- */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
           
