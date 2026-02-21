@@ -46,7 +46,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
     setTimeout(() => { window.print(); }, 100);
   };
 
-  // --- UPDATED DOWNLOAD FUNCTION FOR MOBILE ---
+  // --- NEW: NATIVE PHONE SHARE MENU FOR IMAGES ---
   const handleDownloadPNG = async () => {
     const receiptElement = document.getElementById('printable-receipt');
     if (!receiptElement) return;
@@ -66,17 +66,35 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
       receiptElement.style.overflow = originalOverflow;
       receiptElement.style.height = originalHeight;
 
-      const imgData = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = imgData;
-      link.download = `Invoice_${selectedSale.id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `Invoice_${selectedSale.id}.png`, { type: 'image/png' });
+
+        // NATIVE SHARE FOR MOBILE
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Invoice ${selectedSale.id}`,
+              text: 'Here is your receipt from Puteri Treats!'
+            });
+          } catch (err) {
+            console.log("Share menu closed.", err);
+          }
+        } else {
+          // Fallback for PC
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `Invoice_${selectedSale.id}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }, 'image/png');
 
     } catch (error) {
       console.error("Error generating PNG:", error);
-      alert("Failed to save image. You can always take a screenshot as a backup!");
+      alert("Failed to generate image.");
     }
   };
 
@@ -206,7 +224,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
               
               <div className="flex gap-2">
                  <button onClick={handleDownloadPNG} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
-                    <Download size={14}/> <span className="hidden md:inline">Save PNG</span><span className="md:hidden">PNG</span>
+                    <Download size={14}/> <span className="hidden md:inline">Save Image</span><span className="md:hidden">Save</span>
                  </button>
                  <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
                     <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>

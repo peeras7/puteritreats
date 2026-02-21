@@ -57,41 +57,57 @@ export default function PosDashboard({
 
   const handlePrint = () => { setTimeout(() => { window.print(); }, 100); };
 
-  // --- UPDATED DOWNLOAD FUNCTION FOR MOBILE ---
+  // --- NEW: NATIVE PHONE SHARE MENU FOR IMAGES ---
   const handleDownloadPNG = async () => {
     const receiptElement = document.getElementById('printable-receipt');
     if (!receiptElement) return;
 
     try {
-      // 1. Temporarily remove scroll limits so html2canvas can see the whole thing
+      // Temporarily expand to full height for a clean picture
       const originalOverflow = receiptElement.style.overflow;
       const originalHeight = receiptElement.style.height;
       receiptElement.style.overflow = 'visible';
       receiptElement.style.height = 'auto';
 
-      // 2. Take the picture with a solid white background
       const canvas = await html2canvas(receiptElement, { 
         scale: 2, 
         useCORS: true, 
         backgroundColor: '#ffffff' 
       });
       
-      // 3. Put the scrollbar back immediately
       receiptElement.style.overflow = originalOverflow;
       receiptElement.style.height = originalHeight;
 
-      // 4. Force the mobile download
-      const imgData = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = imgData;
-      link.download = `Invoice_${invoiceId}.png`;
-      document.body.appendChild(link); // Crucial for iPhones
-      link.click();
-      document.body.removeChild(link);
+      // Convert the picture into a file
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `Invoice_${invoiceId}.png`, { type: 'image/png' });
+
+        // NATIVE SHARE FOR MOBILE (iOS/Android)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `Invoice ${invoiceId}`,
+              text: 'Here is your receipt from Puteri Treats!'
+            });
+          } catch (err) {
+            console.log("Share menu closed.", err);
+          }
+        } else {
+          // Fallback for PC
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `Invoice_${invoiceId}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }, 'image/png');
 
     } catch (error) {
       console.error("Error generating PNG:", error);
-      alert("Failed to save image. You can always take a screenshot as a backup!");
+      alert("Failed to generate image.");
     }
   };
 
@@ -208,9 +224,7 @@ export default function PosDashboard({
       {/* --- CHECKOUT FORM MODAL --- */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4">
-          
           <div className="bg-white w-full md:max-w-lg rounded-t-[32px] md:rounded-[32px] shadow-2xl p-6 md:p-8 border border-white/50 animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-            
             <div className="flex justify-between items-center mb-6 shrink-0">
               <h3 className="text-xl md:text-2xl font-bold text-slate-800">Invoice Details</h3>
               <button onClick={() => setIsCheckoutOpen(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X size={24} /></button>
@@ -268,7 +282,6 @@ export default function PosDashboard({
                 <FileText size={20} /><span>{activeCart.id.startsWith('pt') ? 'Update Invoice' : 'Generate Invoice'}</span>
               </button>
             </div>
-
           </div>
         </div>
       )}
@@ -282,7 +295,7 @@ export default function PosDashboard({
               <span className="font-bold flex items-center gap-2 text-xs md:text-sm"><CheckCircle size={14} className="text-green-400"/> Ready</span>
               <div className="flex gap-2">
                  <button onClick={handleDownloadPNG} className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-emerald-600 transition-colors">
-                    <Download size={14}/> <span className="hidden md:inline">Save PNG</span><span className="md:hidden">PNG</span>
+                    <Download size={14}/> <span className="hidden md:inline">Save Image</span><span className="md:hidden">Save</span>
                  </button>
                  <button onClick={handlePrint} className="px-3 py-1.5 bg-[#1a73e8] text-white rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 hover:bg-blue-600 transition-colors">
                     <Printer size={14}/> <span className="hidden md:inline">Print / PDF</span><span className="md:hidden">Print</span>
