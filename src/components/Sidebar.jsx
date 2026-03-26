@@ -1,15 +1,15 @@
 import React from 'react';
-import { LayoutDashboard, Layers, ShoppingBag, Cookie, LogOut, Wallet } from 'lucide-react'; // Added Wallet icon
-import { signOut } from 'firebase/auth'; // Import SignOut
-import { auth } from '../firebase'; // Import Auth
+import { LayoutDashboard, Layers, ShoppingBag, LogOut, Wallet, History } from 'lucide-react'; // Added History icon
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
-  // Added a 'desktopLabel' property to make naming the tabs cleaner!
   const tabs = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'POS', desktopLabel: 'Dashboard (POS)' },
     { id: 'inventory', icon: Layers, label: 'Stock', desktopLabel: 'Inventory' },
     { id: 'sales', icon: ShoppingBag, label: 'Sales', desktopLabel: 'Sales History' },
-    { id: 'payout', icon: Wallet, label: 'Payout', desktopLabel: 'Supplier Payout' } // --- NEW TAB ADDED HERE ---
+    { id: 'payout', icon: Wallet, label: 'Payout', desktopLabel: 'Payout POS' },
+    { id: 'payoutHistory', icon: History, label: 'History', desktopLabel: 'Payout History' } // --- NEW TAB ADDED HERE ---
   ];
 
   const handleLogout = () => {
@@ -20,7 +20,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
   return (
     <>
-      {/* DESKTOP SIDEBAR */}
       <div className="hidden md:flex w-[260px] bg-white flex-col z-10 p-6 h-full border-r border-slate-100/50">
         <div className="flex items-center space-x-3 mb-10 pl-2">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-slate-100">
@@ -43,13 +42,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
             >
               <tab.icon size={20} className={activeTab === tab.id ? "text-white" : "text-slate-400"} />
-              {/* Uses the clean desktopLabel from the array above */}
               <span>{tab.desktopLabel}</span>
             </button>
           ))}
         </div>
 
-        {/* LOGOUT BUTTON */}
         <button 
           onClick={handleLogout}
           className="mt-auto flex items-center space-x-3 px-4 py-3.5 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors font-medium text-[15px]"
@@ -59,9 +56,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </button>
       </div>
 
-      {/* MOBILE BOTTOM NAV */}
       <div className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 z-[50] pb-safe">
-        <div className="flex justify-around items-center h-16 px-2">
+        <div className="flex justify-around items-center h-16 px-1">
           {tabs.map(tab => (
             <button 
               key={tab.id} 
@@ -69,17 +65,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               className={`flex flex-col items-center justify-center w-full h-full space-y-1
               ${activeTab === tab.id ? 'text-[#1a73e8]' : 'text-slate-400'}`}
             >
-              <tab.icon size={24} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
-              <span className="text-[10px] font-bold">{tab.label}</span>
+              <tab.icon size={22} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+              <span className="text-[9px] font-bold">{tab.label}</span>
             </button>
           ))}
-          {/* Mobile Logout */}
           <button 
             onClick={handleLogout}
             className="flex flex-col items-center justify-center w-full h-full space-y-1 text-red-400"
           >
-            <LogOut size={24} strokeWidth={2} />
-            <span className="text-[10px] font-bold">Exit</span>
+            <LogOut size={22} strokeWidth={2} />
+            <span className="text-[9px] font-bold">Exit</span>
           </button>
         </div>
       </div>
