@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2 } from 'lucide-react';
+import { DollarSign, ShoppingBag, TrendingUp, Search, FileText, Calendar, Download, Printer, X, CheckCircle, Trash2, Edit2, ArrowRightCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { doc, deleteDoc } from "firebase/firestore";
 import { db } from '../firebase'; 
@@ -10,24 +10,32 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
   const [selectedSale, setSelectedSale] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
+  // --- NEW: DYNAMIC COMMISSION STATE ---
+  const [commissionRate, setCommissionRate] = useState(15); // Default is 15, but editable!
+
+  // --- DYNAMIC MATH ---
   const totalRevenue = sales.reduce((sum, order) => sum + (order.total || 0), 0);
+  const safeRate = parseFloat(commissionRate) || 0; // Fallback to 0 if input is empty
+  const totalCommission = totalRevenue * (safeRate / 100); 
+  const transferAmount = totalRevenue - totalCommission; 
   const totalOrders = sales.length;
-  const grossProfit = sales.reduce((sum, order) => {
-    return sum + (order.items?.reduce((isum, item) => isum + ((item.commission || 0) * (item.qty || 0)), 0) || 0);
-  }, 0);
 
   const downloadCSV = () => {
-    const headers = ["Date", "Order ID", "Customer", "Items", "Method", "Revenue (RM)", "Commission (RM)"];
+    const headers = ["Date", "Order ID", "Customer", "Items", "Method", "Revenue (RM)", `${safeRate}% Commission (RM)`, "Transfer Amount (RM)"];
     const rows = sales.map(sale => {
-      const rowCommission = sale.items?.reduce((s, i) => s + ((i.commission || 0) * i.qty), 0) || 0;
+      const saleTotal = sale.total || 0;
+      const comm = saleTotal * (safeRate / 100);
+      const transfer = saleTotal - comm;
+      
       return [
         `${sale.date.toLocaleDateString()} ${sale.date.toLocaleTimeString()}`,
         sale.id,
         `"${sale.name || 'Guest'}"`,
         `"${sale.items?.map(i => `${i.qty}x ${i.name}`).join('; ')}"`,
         sale.deliveryMethod,
-        (sale.total || 0).toFixed(2),
-        rowCommission.toFixed(2)
+        saleTotal.toFixed(2),
+        comm.toFixed(2),
+        transfer.toFixed(2)
       ].join(",");
     });
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
@@ -84,8 +92,8 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
       {/* Header */}
       <div className="shrink-0 mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4 no-print">
         <div>
-          <h2 className="text-2xl md:text-[28px] font-bold tracking-tight">Sales History</h2>
-          <p className="text-sm md:text-base text-slate-500 mt-1">Track your profit and transactions</p>
+          <h2 className="text-2xl md:text-[28px] font-bold tracking-tight">Sales & Payouts</h2>
+          <p className="text-sm md:text-base text-slate-500 mt-1">Track revenue, your commission, and transfer amounts</p>
         </div>
         <button onClick={downloadCSV} className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95">
           <Download size={18} /> Export Report
@@ -93,19 +101,38 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="shrink-0 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 no-print">
-        <div className="bg-white p-5 md:p-6 rounded-[24px] shadow-sm border border-slate-100 flex items-center justify-between">
-          <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Sales</p><h3 className="text-2xl md:text-3xl font-extrabold text-slate-900">RM {totalRevenue.toFixed(2)}</h3></div>
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center"><DollarSign size={24} /></div>
+      <div className="shrink-0 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8 no-print">
+        
+        <div className="bg-white p-4 md:p-6 rounded-[20px] shadow-sm border border-slate-100 flex flex-col justify-center">
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5"><DollarSign size={14}/> Total Sales</p>
+          <h3 className="text-xl md:text-3xl font-extrabold text-slate-900">RM {totalRevenue.toFixed(2)}</h3>
         </div>
-        <div className="bg-white p-5 md:p-6 rounded-[24px] shadow-sm border border-slate-100 flex items-center justify-between">
-          <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Commission</p><h3 className="text-2xl md:text-3xl font-extrabold text-emerald-600">RM {grossProfit.toFixed(2)}</h3></div>
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center"><TrendingUp size={24} /></div>
+
+        {/* EDITABLE COMMISSION CARD */}
+        <div className="bg-emerald-50 p-4 md:p-6 rounded-[20px] shadow-sm border border-emerald-100 flex flex-col justify-center">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-[10px] md:text-xs font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5"><TrendingUp size={14}/> Cut %</p>
+            <input 
+              type="number" 
+              className="w-12 bg-white border border-emerald-200 rounded px-1 text-center text-xs font-bold text-emerald-700 outline-none focus:ring-2 ring-emerald-400"
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(e.target.value)}
+            />
+          </div>
+          <h3 className="text-xl md:text-3xl font-extrabold text-emerald-600">RM {totalCommission.toFixed(2)}</h3>
         </div>
-        <div className="bg-white p-5 md:p-6 rounded-[24px] shadow-sm border border-slate-100 flex items-center justify-between">
-          <div><p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Orders</p><h3 className="text-2xl md:text-3xl font-extrabold text-slate-900">{totalOrders}</h3></div>
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center"><ShoppingBag size={24} /></div>
+
+        <div className="bg-[#1a73e8] p-4 md:p-6 rounded-[20px] shadow-lg shadow-blue-500/30 flex flex-col justify-center relative overflow-hidden">
+          <div className="absolute -right-4 -bottom-4 opacity-10"><ArrowRightCircle size={100} /></div>
+          <p className="text-[10px] md:text-xs font-bold text-blue-200 uppercase tracking-wider mb-1 flex items-center gap-1.5 relative z-10"><ArrowRightCircle size={14}/> To Transfer</p>
+          <h3 className="text-xl md:text-3xl font-extrabold text-white relative z-10">RM {transferAmount.toFixed(2)}</h3>
         </div>
+
+        <div className="bg-white p-4 md:p-6 rounded-[20px] shadow-sm border border-slate-100 flex flex-col justify-center">
+          <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1.5"><ShoppingBag size={14}/> Total Orders</p>
+          <h3 className="text-xl md:text-3xl font-extrabold text-slate-900">{totalOrders}</h3>
+        </div>
+
       </div>
 
       {/* Transactions Table */}
@@ -178,7 +205,7 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
         </div>
       </div>
 
-      {/* --- INVOICE MODAL (REVERTED TO PRINTABLE STRUCTURE) --- */}
+      {/* --- INVOICE MODAL --- */}
       {isInvoiceOpen && selectedSale && (
         <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-[393px] md:max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] md:rounded-xl">
@@ -197,7 +224,6 @@ export default function SalesHistory({ sales, loading, onEditOrder }) {
               </div>
             </div>
 
-            {/* This exact div structure is what makes window.print() work properly */}
             <div id="printable-receipt" className="flex-1 bg-white overflow-y-auto overflow-x-hidden text-slate-800 font-sans relative flex flex-col p-4 md:p-8">
               
               <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-6 md:pb-6 md:mb-8">
