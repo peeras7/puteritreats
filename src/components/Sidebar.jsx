@@ -1,13 +1,15 @@
 import React from 'react';
-import { LayoutDashboard, Layers, ShoppingBag, Cookie, LogOut } from 'lucide-react'; // Added LogOut icon
+import { LayoutDashboard, Layers, ShoppingBag, Cookie, LogOut, Wallet } from 'lucide-react'; // Added Wallet icon
 import { signOut } from 'firebase/auth'; // Import SignOut
 import { auth } from '../firebase'; // Import Auth
 
 export default function Sidebar({ activeTab, setActiveTab }) {
+  // Added a 'desktopLabel' property to make naming the tabs cleaner!
   const tabs = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'POS' },
-    { id: 'inventory', icon: Layers, label: 'Stock' },
-    { id: 'sales', icon: ShoppingBag, label: 'Sales' }
+    { id: 'dashboard', icon: LayoutDashboard, label: 'POS', desktopLabel: 'Dashboard (POS)' },
+    { id: 'inventory', icon: Layers, label: 'Stock', desktopLabel: 'Inventory' },
+    { id: 'sales', icon: ShoppingBag, label: 'Sales', desktopLabel: 'Sales History' },
+    { id: 'payout', icon: Wallet, label: 'Payout', desktopLabel: 'Supplier Payout' } // --- NEW TAB ADDED HERE ---
   ];
 
   const handleLogout = () => {
@@ -21,9 +23,9 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       {/* DESKTOP SIDEBAR */}
       <div className="hidden md:flex w-[260px] bg-white flex-col z-10 p-6 h-full border-r border-slate-100/50">
         <div className="flex items-center space-x-3 mb-10 pl-2">
-<div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-slate-100">
-  <img src="/logo.png" alt="Pu3's Treats Logo" className="w-full h-full object-cover" />
-</div>
+          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden border border-slate-100">
+            <img src="/logo.png" alt="Puteri Treats Logo" className="w-full h-full object-cover" />
+          </div>
           <div>
             <h1 className="text-xl font-bold leading-tight tracking-tight text-slate-800">Treats</h1>
             <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Admin Panel</p>
@@ -41,7 +43,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'}`}
             >
               <tab.icon size={20} className={activeTab === tab.id ? "text-white" : "text-slate-400"} />
-              <span>{tab.label === 'POS' ? 'Dashboard (POS)' : tab.label === 'Stock' ? 'Inventory' : 'Sales History'}</span>
+              {/* Uses the clean desktopLabel from the array above */}
+              <span>{tab.desktopLabel}</span>
             </button>
           ))}
         </div>

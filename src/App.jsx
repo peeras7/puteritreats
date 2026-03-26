@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar';
 import Inventory from './pages/Inventory';
 import PosDashboard from './pages/PosDashboard';
 import SalesHistory from './pages/SalesHistory'; 
+import SupplierPayout from './pages/SupplierPayout'; // --- NEW IMPORT ---
 import Login from './pages/Login'; 
 
 export default function App() {
@@ -19,7 +20,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [salesLoading, setSalesLoading] = useState(true); 
 
-  // --- MULTIPLE CARTS (TABS) STATE ---
   const createEmptyCart = () => ({
     id: Date.now().toString(), 
     name: '', 
@@ -66,7 +66,6 @@ export default function App() {
     return () => { unsubInv(); unsubSales(); };
   }, [user]); 
 
-  // --- CART TAB FUNCTIONS ---
   const handleAddCart = () => {
     const newCart = createEmptyCart();
     setCarts([...carts, newCart]);
@@ -109,11 +108,9 @@ export default function App() {
     }));
   };
 
-  // --- NEW: EDIT PAST ORDER FUNCTION ---
   const handleEditPastOrder = (order) => {
     const existingTab = carts.find(c => c.id === order.id);
     if (!existingTab) {
-      // Create a new tab pre-filled with the old order's data
       setCarts([...carts, {
         id: order.id,
         name: order.name || '',
@@ -125,7 +122,7 @@ export default function App() {
       }]);
     }
     setActiveCartId(order.id);
-    setActiveTab('dashboard'); // Jump to the POS screen
+    setActiveTab('dashboard'); 
   };
 
   const cartTotal = activeCart.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
@@ -195,10 +192,17 @@ export default function App() {
 
             {activeTab === 'sales' && (
               <div className="h-full w-full overflow-auto p-4 md:p-8">
-                {/* Passed the edit function into the History tab */}
                 <SalesHistory sales={sales} loading={salesLoading} onEditOrder={handleEditPastOrder} /> 
               </div>
             )}
+
+            {/* --- NEW TAB ADDED HERE --- */}
+            {activeTab === 'payout' && (
+              <div className="h-full w-full overflow-auto p-4 md:p-8">
+                <SupplierPayout inventory={inventory} />
+              </div>
+            )}
+
           </div>
         </div>
       </div>
