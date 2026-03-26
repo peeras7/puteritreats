@@ -8,8 +8,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     { id: 'dashboard', icon: LayoutDashboard, label: 'POS', desktopLabel: 'Dashboard (POS)' },
     { id: 'inventory', icon: Layers, label: 'Stock', desktopLabel: 'Inventory' },
     { id: 'sales', icon: ShoppingBag, label: 'Sales', desktopLabel: 'Sales History' },
-    { id: 'payout', icon: Wallet, label: 'Payout', desktopLabel: 'Supplier Payout POS' },
-    { id: 'payoutHistory', icon: History, label: 'History', desktopLabel: 'Supplier Payout History' } // --- NEW TAB ADDED HERE ---
+    { id: 'payout', icon: Wallet, label: 'Payout', desktopLabel: 'Supplier POS' },
+    { id: 'payoutHistory', icon: History, label: 'History', desktopLabel: 'Supplier History' } // --- NEW TAB ADDED HERE ---
   ];
 
   const handleLogout = () => {
